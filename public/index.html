@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="fr"> <!-- Langue initiale, modifiée par JS si besoin -->
+<head>
+    <meta charset="UTF-8"> <!-- ESSENTIEL pour l'arabe -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plans Hebdomadaires</title> <!-- Titre initial, modifié par JS si besoin -->
+
+    <!-- Google Fonts: Poppins -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome pour les icônes -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+        integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <!-- Bibliothèque XLSX pour lire/écrire les fichiers Excel côté client -->
+    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+    <!-- Bibliothèque FileSaver.js pour déclencher le téléchargement des fichiers générés -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <!-- Lien vers VOTRE fichier CSS (style.css) - Assurez-vous qu'il est à jour -->
+    <link rel="stylesheet" href="style.css">
+    
+    <style>
+        .table-actions-container {
+            display: flex;
+            justify-content: flex-start; /* Aligne le bouton à gauche */
+            padding-bottom: 15px;      /* Espace avant le tableau */
+            padding-left: 15px;        /* Marge identique aux autres conteneurs */
+        }
+        /* Style pour que les sauts de ligne soient visibles dans les cellules éditables */
+        td.editable {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+    </style>
+
+</head>
+
+<body dir="ltr"> <!-- Direction initiale, modifiée par JS si besoin -->
+
+    <!-- ======================== -->
+    <!-- FORMULAIRE DE CONNEXION  -->
+    <!-- ======================== -->
+    <div id="login-form">
+        <div class="login-card">
+            <img id="logo"
+                 src="https://cdn.glitch.global/1c613b14-019c-488a-a856-d55d64d174d0/al-kawthar-international-schools-jeddah-saudi-arabia-modified.png?v=1739565146299"
+                 alt="Logo Al-Kawthar">
+            <h1>Connexion</h1> <!-- Traduit par JS si besoin -->
+            <div>
+                <label for="username">Nom d'utilisateur (Enseignant) :</label> <!-- Traduit par JS si besoin -->
+                <input type="text" id="username" name="username" required>
+            </div>
+            <div class="password-container">
+                <label for="password">Mot de passe (idem Nom) :</label> <!-- Traduit par JS si besoin -->
+                <input type="password" id="password" name="password" required>
+                <i class="fas fa-eye password-toggle-icon" id="togglePassword"></i>
+            </div>
+            
+            <button id="login-button" class="pro-button"><i class="fas fa-sign-in-alt"></i> <span class="btn-text">Se connecter</span></button> <!-- Texte traduit par JS si besoin -->
+            <p id="login-error"></p>
+        </div>
+    </div>
+
+    <!-- ======================== -->
+    <!-- CONTENU PRINCIPAL        -->
+    <!-- ======================== -->
+    <div id="main-content" style="display: none;"> <!-- Caché initialement, affiché par JS après login -->
+
+        <!-- Zone Supérieure : Logo, Titre, Infos Utilisateur & Déconnexion -->
+        <div class="main-header-container">
+            <img id="logo-main"
+                 src="https://cdn.glitch.global/1c613b14-019c-488a-a856-d55d64d174d0/al-kawthar-international-schools-jeddah-saudi-arabia-modified.png?v=1739565146299"
+                 alt="Logo Al-Kawthar">
+
+            <div class="title-user-info">
+                 <h1 id="main-title">Plans Hebdomadaires</h1> <!-- Traduit par JS si besoin -->
+                 <!-- La date/semaine est remplie par JS (formatDateForDisplay) -->
+                 <h2 id="weekDateRange"></h2>
+                 <!-- Infos utilisateur et bouton Déconnexion -->
+                 <div class="user-actions-container">
+                    <span id="loggedInUserInfo" style="font-style: italic;"></span>
+                    <button id="logout-button" class="pro-button danger-button">
+                        <i class="fas fa-sign-out-alt"></i> <span class="btn-text">Déconnecter</span> <!-- Traduit par JS si besoin -->
+                    </button>
+                 </div>
+            </div>
+        </div>
+
+        <!-- Bouton pour afficher/masquer la liste des enseignants incomplets (Style CSS pour fixe) -->
+         <button id="toggleIncompleteBtn" onclick="toggleIncompleteList()" class="pro-button toggle-incomplete-btn">
+             <i class="fas fa-list-check"></i> <span class="btn-text">Afficher Incomplets</span> <!-- Texte traduit par JS -->
+        </button>
+
+        <!-- Zone pour afficher les enseignants incomplets (cachée par défaut) -->
+        <div id="incompleteTeachersDisplay" style="display: none;">
+            <h4>Enseignants Incomplets (Travaux)</h4> <!-- Traduit par JS -->
+            <ul id="incompleteList">
+                <li>Chargement...</li> <!-- Traduit par JS -->
+            </ul>
+        </div>
+
+        <!-- Conteneur pour le sélecteur de semaine -->
+        <div class="filter-container week-selector-container">
+            <label for="weekSelector"><i class="fas fa-calendar-week"></i> Semaine:</label> <!-- Icône conservée -->
+            <select id="weekSelector" onchange="loadPlanForWeek()">
+                 <option value="">-- Sélectionnez une semaine --</option> <!-- Traduit par JS -->
+                 <option value="1">Semaine 1</option><option value="2">Semaine 2</option><option value="3">Semaine 3</option><option value="4">Semaine 4</option><option value="5">Semaine 5</option><option value="6">Semaine 6</option><option value="7">Semaine 7</option><option value="8">Semaine 8</option><option value="9">Semaine 9</option><option value="10">Semaine 10</option><option value="11">Semaine 11</option><option value="12">Semaine 12</option><option value="13">Semaine 13</option><option value="14">Semaine 14</option><option value="15">Semaine 15</option><option value="16">Semaine 16</option><option value="17">Semaine 17</option><option value="18">Semaine 18</option><option value="19">Semaine 19</option><option value="20">Semaine 20</option><option value="21">Semaine 21</option><option value="22">Semaine 22</option><option value="23">Semaine 23</option><option value="24">Semaine 24</option><option value="25">Semaine 25</option><option value="26">Semaine 26</option><option value="27">Semaine 27</option><option value="28">Semaine 28</option><option value="29">Semaine 29</option><option value="30">Semaine 30</option><option value="31">Semaine 31</option><option value="32">Semaine 32</option><option value="33">Semaine 33</option><option value="34">Semaine 34</option><option value="35">Semaine 35</option><option value="36">Semaine 36</option><option value="37">Semaine 37</option><option value="38">Semaine 38</option><option value="39">Semaine 39</option><option value="40">Semaine 40</option><option value="41">Semaine 41</option><option value="42">Semaine 42</option><option value="43">Semaine 43</option><option value="44">Semaine 44</option><option value="45">Semaine 45</option><option value="46">Semaine 46</option><option value="47">Semaine 47</option><option value="48">Semaine 48</option>
+            </select>
+        </div>
+
+        <!-- ======================== -->
+        <!-- SECTION ADMIN            -->
+        <!-- ======================== -->
+        <div id="admin-actions" class="filter-container admin-section" style="display: none;">
+             <h3 id="admin-title">Actions Administrateur</h3> <!-- Traduit par JS -->
+             <div>
+                <label for="excelFileInput" id="admin-excel-label"><i class="fas fa-file-excel"></i> Fichier Excel :</label> <!-- Icône conservée -->
+                <input type="file" id="excelFileInput" accept=".xlsx, .xls" onchange="handleFileUpload(event)">
+             </div>
+             <button id="saveUploadedDataBtn" onclick="saveUploadedData()" disabled class="pro-button accent-button"> <!-- Style conservé -->
+                 <i class="fas fa-database"></i> <span class="btn-text">Charger et Enregistrer dans la DB</span> <!-- Traduit par JS -->
+             </button>
+             <span id="file-upload-status" style="font-size: 0.9em;"></span>
+             
+             <div class="admin-subsection">
+                <label for="adminReportClassSelector" id="admin-report-class-label"><i class="fas fa-school"></i> Choisir une Classe :</label>
+                <select id="adminReportClassSelector">
+                    <option value="">-- D'abord charger les classes --</option>
+                </select>
+                <button id="generateFullReportBtn" onclick="generateFullReportByClass()" class="pro-button success-button">
+                    <i class="fas fa-file-invoice"></i> <span class="btn-text">Générer Rapport Complet par Classe</span>
+                </button>
+             </div>
+
+             <div style="width: 100%; margin-top: 10px; font-size: 0.85em; color: var(--muted-text-color); border-top: 1px dashed var(--border-color); padding-top: 10px;">
+                 <i class="fas fa-info-circle"></i> **Note:** La fonction d'upload et d'extraction automatique depuis des fichiers Word ou PDF n'est pas implémentée dans cette version. Veuillez utiliser le format Excel pour charger les données via le bouton ci-dessus.
+             </div>
+        </div>
+        <!-- ======================== -->
+        <!-- FIN SECTION ADMIN        -->
+        <!-- ======================== -->
+
+
+        <!-- Actions principales (Word, Excel) -->
+        <div class="filter-container main-actions-container">
+            <button id="generateWordBtn" onclick="generateWordByClasse()" class="action-button pro-button" disabled>
+                 <i class="fas fa-file-word"></i> <span class="btn-text">Générer Word par Classe</span> <!-- Traduit par JS -->
+            </button>
+            <button id="generateExcelBtn" onclick="generateExcelWorkbook()" class="action-button pro-button" disabled>
+                 <i class="fas fa-file-excel"></i> <span class="btn-text">Générer Excel (1 Fichier)</span> <!-- Traduit par JS -->
+            </button>
+            <a id="downloadLink" style="display:none;"></a>
+        </div>
+
+        <!-- Filtres -->
+        <div class="filter-container data-filters-container">
+             <label for="filterEnseignant" id="filter-enseignant-label"><i class="fas fa-user-tie"></i> Enseignant:</label> <!-- Icône conservée -->
+             <select id="filterEnseignant" onchange="sortAndDisplay()"> <option value="">Tous</option> </select>
+
+             <label for="filterClasse" id="filter-classe-label"><i class="fas fa-chalkboard-user"></i> Classe:</label> <!-- Icône conservée -->
+             <select id="filterClasse" onchange="sortAndDisplay()"> <option value="">Toutes</option> </select>
+
+             <label for="filterMatiere" id="filter-matiere-label"><i class="fas fa-book"></i> Matière:</label> <!-- Icône conservée -->
+             <select id="filterMatiere" onchange="sortAndDisplay()"> <option value="">Toutes</option> </select>
+
+             <label for="filterPeriode" id="filter-periode-label"><i class="fas fa-clock"></i> Période:</label> <!-- Icône conservée -->
+             <select id="filterPeriode" onchange="sortAndDisplay()"> <option value="">Toutes</option> </select>
+
+             <label for="filterJour" id="filter-jour-label"><i class="fas fa-calendar-day"></i> Jour:</label> <!-- Icône conservée -->
+             <select id="filterJour" onchange="sortAndDisplay()">
+                 <option value="">Tous</option>
+                 <option value="Dimanche">Dimanche</option>
+                 <option value="Lundi">Lundi</option>
+                 <option value="Mardi">Mardi</option>
+                 <option value="Mercredi">Mercredi</option>
+                 <option value="Jeudi">Jeudi</option>
+                 <!-- Options traduites par JS -->
+            </select>
+        </div>
+
+
+        <!-- Zone pour les messages d'alerte (succès/erreur) -->
+        <div id="message-alerte" style="display: none;"></div>
+
+        <!-- Barre de progression -->
+        <div id="progress-bar-container" style="display: none;">
+            <div id="progress-bar">0%</div>
+        </div>
+
+        <!-- Zone de saisie des notes PAR CLASSE -->
+         <div class="notes-container">
+            <label for="notesClassSelector" id="notes-class-label" style="font-weight: bold;"><i class="fas fa-sticky-note"></i> Notes pour la classe :</label> <!-- Icône conservée -->
+            <select id="notesClassSelector" onchange="displayClassNotes()">
+                <option value="">-- Sélectionnez une classe --</option> <!-- Traduit par JS -->
+            </select>
+
+            <textarea id="notesInput" rows="4" placeholder="Sélectionnez une classe pour voir ou ajouter des notes..." spellcheck="true" disabled dir="auto"></textarea> <!-- Traduit par JS -->
+
+            <div style="width: 100%; display: flex; justify-content: space-between; align-items: center; margin-top: 5px;">
+                <button id="saveNotesBtn" onclick="saveNotes()" class="action-button pro-button success-button" disabled> <!-- Style conservé -->
+                    <i class="fas fa-save"></i> <span class="btn-text">Enregistrer Notes</span> <!-- Traduit par JS -->
+                </button>
+                <span id="notes-save-status" style="font-size: 0.9em;"></span>
+            </div>
+        </div>
+
+        <!-- ===== NOUVEAU : Conteneur pour le bouton au-dessus du tableau ===== -->
+        <div class="table-actions-container">
+            <button id="saveAllDisplayedBtn" onclick="saveAllDisplayedRows()" class="action-button save-all-button pro-button success-button" disabled>
+                <i class="fas fa-save"></i> <span class="btn-text">Enregistrer Lignes Affichées</span> <!-- Traduit par JS -->
+            </button>
+            <button id="generateWeeklyLessonsBtn" onclick="generateWeeklyLessonPlans()" class="action-button pro-button" disabled>
+                <i class="fas fa-robot"></i> <span class="btn-text">Générer Plans de Leçons (Semaine)</span>
+            </button>
+        </div>
+
+        <!-- Wrapper pour le tableau responsive -->
+        <div class="table-responsive-wrapper">
+            <!-- Tableau principal -->
+            <table id="planTable">
+                <thead>
+                    <tr>
+                        <!-- En-têtes générés dynamiquement par JS (createTableHeader) avec traduction -->
+                    </tr>
+                </thead>
+                <tbody>
+                     <!-- Message initial (sera remplacé par JS) -->
+                     <tr id="initial-table-row">
+                         <td colspan="10" style="text-align:center; padding: 20px; color: grey;" id="initial-table-message">
+                             Veuillez sélectionner une semaine pour afficher les données. <!-- Texte traduit par JS -->
+                         </td>
+                     </tr>
+                </tbody>
+            </table>
+        </div> <!-- Fin de .table-responsive-wrapper -->
+
+
+    </div> <!-- Fin de #main-content -->
+
+    <!-- ======================== -->
+    <!-- SCRIPT JAVASCRIPT        -->
+    <!-- ======================== -->
+    <script src="script.js"></script>
+
+</body>
+</html>
