@@ -89,11 +89,27 @@ const validUsers = {
 let cachedDb = null;
 async function connectToDatabase() {
   if (cachedDb) return cachedDb;
-  const client = new MongoClient(MONGO_URL);
-  await client.connect();
-  const db = client.db();
-  cachedDb = db;
-  return db;
+  
+  if (!MONGO_URL) {
+    throw new Error('MONGO_URL environment variable is not defined. Please configure your MongoDB connection string.');
+  }
+  
+  try {
+    const client = new MongoClient(MONGO_URL, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      serverSelectionTimeoutMS: 5000,
+      connectTimeoutMS: 10000,
+    });
+    await client.connect();
+    const db = client.db();
+    cachedDb = db;
+    console.log('✅ MongoDB connected successfully');
+    return db;
+  } catch (error) {
+    console.error('❌ MongoDB connection error:', error.message);
+    throw new Error(`MongoDB connection failed: ${error.message}`);
+  }
 }
 
 function formatDateFrenchNode(date) {
@@ -149,8 +165,8 @@ app.get('/api/plans/:week', async (req, res) => {
       res.status(200).json({ planData: [], classNotes: {} });
     }
   } catch (error) {
-    console.error('Erreur MongoDB /plans/:week:', error);
-    res.status(500).json({ message: 'Erreur serveur.' });
+    console.error('❌ Erreur MongoDB /plans/:week:', error);
+    res.status(500).json({ message: `Erreur serveur: ${error.message}` });
   }
 });
 
@@ -234,8 +250,8 @@ app.get('/api/all-classes', async (req, res) => {
     const classes = await db.collection('plans').distinct('data.Classe', { 'data.Classe': { $ne: null, $ne: "" } });
     res.status(200).json(classes.sort());
   } catch (error) {
-    console.error('Erreur MongoDB /api/all-classes:', error);
-    res.status(500).json({ message: 'Erreur serveur.' });
+    console.error('❌ Erreur MongoDB /api/all-classes:', error);
+    res.status(500).json({ message: `Erreur serveur: ${error.message}` });
   }
 });
 
@@ -837,6 +853,9 @@ if (require.main === module) {
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Serveur Plans Hebdomadaires démarré sur le port ${PORT}`);
     console.log(`📝 Application accessible à l'adresse : http://localhost:${PORT}`);
+    console.log(`📦 MONGO_URL configuré: ${MONGO_URL ? '✅ Oui' : '❌ Non - Veuillez définir la variable d\'environnement MONGO_URL'}`);
+    console.log(`📄 WORD_TEMPLATE_URL configuré: ${WORD_TEMPLATE_URL ? '✅ Oui' : '❌ Non'}`);
+    console.log(`📄 LESSON_TEMPLATE_URL configuré: ${LESSON_TEMPLATE_URL ? '✅ Oui' : '❌ Non'}`);
   });
 }
 
