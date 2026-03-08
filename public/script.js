@@ -592,8 +592,8 @@
                         // Afficher une alerte visuelle
                         displayAlert(`⚠️ Attention: ${Object.keys(incompleteTeachersInfo).length} enseignant(s) n'ont pas encore terminé leurs travaux de classe pour cette semaine!`, true);
                         
-                        // 🔔 NOUVEAU: Envoyer des notifications push aux enseignants incomplets
-                        await notifyIncompleteTeachers(weekToLoad, incompleteTeachersInfo);
+                        // 🔔 DÉSACTIVÉ: Envoyer des notifications push aux enseignants incomplets
+                        // await notifyIncompleteTeachers(weekToLoad, incompleteTeachersInfo);
                     }
                 }, 500);
             }
