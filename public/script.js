@@ -16,8 +16,9 @@
         // Version d'authentification pour forcer la déconnexion
         const AUTH_VERSION = 2; // Incrémenter pour forcer tous les utilisateurs à se reconnecter
 
-        const arabicTeachers = ['Majed', 'Jaber', 'Imad'];
-        const englishTeachers = ['Kamel'];
+        const arabicTeachers = ['Nidaa', 'Dina', 'Amal Najar', 'Abeer', 'Fatima Zahrani'];
+        const englishTeachers = ['Amal', 'Hana'];
+        const frenchTeachers = ['Nour', 'Fatima', 'Nesrine', 'Rommana', 'Rayan'];
         const isArabicUser = () => currentUserLanguage === 'ar';
         
         // Version du code pour vérifier le déploiement
@@ -63,14 +64,14 @@
          11:{start:'2025-11-09',end:'2025-11-13'},12:{start:'2025-11-16',end:'2025-11-20'},
          13:{start:'2025-11-23',end:'2025-11-27'},14:{start:'2025-11-30',end:'2025-12-04'},
          15:{start:'2025-12-07',end:'2025-12-11'},16:{start:'2025-12-14',end:'2025-12-18'},
-         17:{start:'2025-12-21',end:'2025-12-25'},18:{start:'2026-01-18',end:'2026-01-22'},
-         19:{start:'2026-01-25',end:'2026-01-29'},20:{start:'2026-02-01',end:'2026-02-05'},
-         21:{start:'2026-02-08',end:'2026-02-12'},22:{start:'2026-02-15',end:'2026-02-19'},
-         23:{start:'2026-02-22',end:'2026-02-26'},24:{start:'2026-03-01',end:'2026-03-05'},
-         25:{start:'2026-03-29',end:'2026-04-02'},26:{start:'2026-04-05',end:'2026-04-09'},
-         27:{start:'2026-04-12',end:'2026-04-16'},28:{start:'2026-04-19',end:'2026-04-23'},
-         29:{start:'2026-04-26',end:'2026-04-30'},30:{start:'2026-05-03',end:'2026-05-07'},
-         31:{start:'2026-05-10',end:'2026-05-14'}
+         17:{start:'2025-12-21',end:'2025-12-25'},18:{start:'2025-12-28',end:'2026-01-01'},
+         19:{start:'2026-01-04',end:'2026-01-08'},20:{start:'2026-01-18',end:'2026-01-22'},
+         21:{start:'2026-01-25',end:'2026-01-29'},22:{start:'2026-02-01',end:'2026-02-05'},
+         23:{start:'2026-02-08',end:'2026-02-12'},24:{start:'2026-02-15',end:'2026-02-19'},
+         25:{start:'2026-02-22',end:'2026-02-26'},26:{start:'2026-03-01',end:'2026-03-05'},
+         27:{start:'2026-03-29',end:'2026-04-02'},28:{start:'2026-04-05',end:'2026-04-09'},
+         29:{start:'2026-04-12',end:'2026-04-16'},30:{start:'2026-04-19',end:'2026-04-23'},
+         31:{start:'2026-04-26',end:'2026-04-30'}
         };
 
         // --- Utilitaires ---
