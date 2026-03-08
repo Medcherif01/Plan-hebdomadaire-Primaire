@@ -1,210 +1,82 @@
-# Plan Hebdomadaire - Application de Gestion
+# Plan Hebdomadaire 2026 - Application Web
 
-Application web pour la gestion des plans hebdomadaires scolaires avec support multilingue (Français, Arabe, Anglais).
-
-## 🚀 Fonctionnalités
-
-- **Gestion des plans hebdomadaires** : Création, modification et consultation des plans par semaine
-- **Support multilingue** : Français, Arabe (RTL), Anglais
-- **Génération de documents** :
-  - Export Word par classe
-  - Export Excel global
-  - Plans de leçons générés par IA (Gemini)
-- **Gestion par rôle** :
-  - Enseignants : Consultation et modification de leurs plans
-  - Administrateurs : Gestion complète et imports Excel
-- **Interface responsive** : Optimisée pour tous les appareils
-
-## 📋 Prérequis
-
-- Node.js (v14 ou supérieur)
-- MongoDB Atlas (compte gratuit)
-- Clé API Google Gemini (optionnel, pour la génération IA)
-
-## 🔧 Installation
-
-### 1. Cloner le dépôt
-```bash
-git clone https://github.com/Medcherif01/Plan-hebdomadaire-Primaire.git
-cd Plan-hebdomadaire-Primaire
-```
-
-### 2. Installer les dépendances
-```bash
-npm install
-```
-
-### 3. Configuration des variables d'environnement
-
-Créez un fichier `.env` à la racine du projet en vous basant sur `.env.example` :
-
-```bash
-cp .env.example .env
-```
-
-Modifiez le fichier `.env` avec vos valeurs :
-
-```env
-# MongoDB Configuration
-MONGO_URL=mongodb+srv://username:password@cluster.mongodb.net/database?retryWrites=true&w=majority
-
-# Word Template URLs
-WORD_TEMPLATE_URL=https://votre-url-template.com/template.docx
-LESSON_TEMPLATE_URL=https://votre-url-template.com/lesson-template.docx
-
-# Gemini AI API Key
-GEMINI_API_KEY=votre_cle_api_gemini
-
-# Port
-PORT=3000
-```
-
-### 4. Configuration MongoDB Atlas
-
-1. Créez un compte sur [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
-2. Créez un nouveau cluster
-3. Dans "Database Access", créez un utilisateur avec les droits de lecture/écriture
-4. Dans "Network Access", ajoutez votre adresse IP ou `0.0.0.0/0` (pour tous)
-5. Dans "Database", cliquez sur "Connect" puis "Connect your application"
-6. Copiez la chaîne de connexion et remplacez `<password>` par votre mot de passe
-
-### 5. Obtenir une clé API Gemini (optionnel)
-
-1. Allez sur [Google AI Studio](https://makersuite.google.com/app/apikey)
-2. Créez une nouvelle clé API
-3. Ajoutez-la dans votre fichier `.env`
-
-## 🎯 Utilisation
-
-### Démarrage en développement
-```bash
-npm run dev
-```
-
-### Démarrage en production
-```bash
-npm start
-```
-
-L'application sera accessible à l'adresse : http://localhost:3000
-
-## 🔐 Connexion
-
-Les identifiants par défaut sont définis dans le fichier `api/index.js` :
-
-```javascript
-const validUsers = {
-  "Mohamed": "Mohamed",  // Administrateur
-  "Rasha": "Rasha",      // Administrateur
-  "Amal": "Amal",        // Enseignant anglais
-  // ... autres utilisateurs
-};
-```
-
-**Format de connexion :**
-- Nom d'utilisateur : Prénom de l'enseignant
-- Mot de passe : Identique au nom d'utilisateur
-
-## 📂 Structure du projet
-
-```
-Plan-hebdomadaire-Primaire/
-├── api/
-│   └── index.js          # Serveur Express & routes API
-├── public/
-│   ├── index.html        # Interface utilisateur
-│   ├── script.js         # Logique frontend
-│   └── style.css         # Styles CSS
-├── package.json          # Dépendances Node.js
-├── vercel.json           # Configuration Vercel
-├── .env.example          # Exemple de variables d'environnement
-└── README.md            # Ce fichier
-```
+Application de gestion des plans hebdomadaires avec génération automatique de plans de leçon par IA.
 
 ## 🚀 Déploiement
 
-### Vercel (recommandé)
+### Variables d'environnement Vercel
 
-1. Installez Vercel CLI :
-```bash
-npm install -g vercel
+Pour activer la génération de plans de leçon par IA, configurez les variables d'environnement suivantes sur Vercel :
+
+#### Option 1 : GROQ API (Recommandé - Quota plus généreux)
+```
+GROQ_API_KEY=gsk_votre_cle_groq_ici
 ```
 
-2. Déployez :
-```bash
-vercel
+**Obtenir une clé GROQ :**
+1. Créer un compte sur https://console.groq.com/
+2. Aller dans "API Keys"
+3. Créer une nouvelle clé API
+4. Copier la clé (format : `gsk_...`)
+5. L'ajouter dans Vercel → Settings → Environment Variables
+
+**Avantages GROQ :**
+- Quota gratuit plus élevé que Gemini
+- Modèle rapide : llama-3.3-70b-versatile
+- Pas de limite stricte de 20 requêtes/jour
+
+#### Option 2 : Google Gemini API (Fallback)
+```
+GEMINI_API_KEY=votre_cle_gemini_ici
 ```
 
-3. Configurez les variables d'environnement dans le dashboard Vercel :
-   - Allez dans votre projet > Settings > Environment Variables
-   - Ajoutez toutes les variables de votre `.env`
+**Note :** Si `GROQ_API_KEY` est définie, elle sera utilisée en priorité. Gemini sera utilisé uniquement comme fallback si GROQ n'est pas disponible.
 
-### Autres plateformes
-
-L'application peut être déployée sur :
-- Heroku
-- Railway
-- Render
-- DigitalOcean App Platform
-
-Assurez-vous toujours de configurer les variables d'environnement sur la plateforme choisie.
-
-## 🐛 Dépannage
-
-### Erreur "MONGO_URL not defined"
-- Vérifiez que le fichier `.env` existe et contient `MONGO_URL`
-- Vérifiez que le format de la chaîne de connexion MongoDB est correct
-- Assurez-vous que votre IP est autorisée dans MongoDB Atlas
-
-### Erreur "querySrv ENOTFOUND"
-- Vérifiez que le nom du cluster dans `MONGO_URL` est correct
-- Vérifiez votre connexion internet
-- Testez la connexion avec MongoDB Compass
-
-### Les templates Word ne se génèrent pas
-- Vérifiez que `WORD_TEMPLATE_URL` et `LESSON_TEMPLATE_URL` sont définis
-- Assurez-vous que les URLs sont accessibles publiquement
-- Vérifiez que les fichiers sont au format `.docx`
-
-### L'IA ne génère pas les plans de leçons
-- Vérifiez que `GEMINI_API_KEY` est définie
-- Vérifiez que la clé API est valide sur [Google AI Studio](https://makersuite.google.com/)
-- Consultez les logs serveur pour plus de détails
-
-## 📝 Fonctionnalités administrateur
-
-Les utilisateurs "Mohamed" et "Rasha" ont accès aux fonctionnalités d'administration :
-
-- Import de fichiers Excel
-- Génération de rapports complets par classe
-- Accès à toutes les données de tous les enseignants
-
-## 🌐 Support multilingue
-
-L'application détecte automatiquement la langue selon l'utilisateur :
-- **Enseignants arabes** : Interface en arabe (RTL)
-- **Enseignants anglais** : Interface en anglais
-- **Autres utilisateurs** : Interface en français
-
-## 📄 Licence
-
-Ce projet est sous licence privée pour Al-Kawthar International Schools.
-
-## 🤝 Support
-
-Pour toute question ou problème :
-1. Vérifiez la section "Dépannage" ci-dessus
-2. Consultez les logs serveur avec `npm run dev`
-3. Contactez l'équipe de développement
-
-## 🔄 Mises à jour
-
-Pour mettre à jour l'application :
-
-```bash
-git pull origin main
-npm install
-# Si les dépendances ont changé
-npm run build  # Si nécessaire
-pm2 restart all  # Si vous utilisez PM2
+#### Autres variables requises
 ```
+MONGO_URL=mongodb+srv://...
+WORD_TEMPLATE_URL=https://...
+LESSON_TEMPLATE_URL=https://...
+VAPID_PUBLIC_KEY=...
+VAPID_PRIVATE_KEY=...
+```
+
+## 📝 Fonctionnalités
+
+### Génération de Plans de Leçon IA
+- **Bouton disquette** : Génère un plan de leçon pour une seule ligne
+- **Bouton global violet** : "Générer Plans de Leçon (Affichés)" - génère tous les plans affichés dans le tableau et les télécharge en ZIP
+
+### Endpoints API
+- `/api/generate-ai-lesson-plan` : Génération simple d'un plan
+- `/api/generate-multiple-ai-lesson-plans` : Génération multiple en ZIP
+
+## 🔧 Technologies
+- **Backend** : Node.js, Express, MongoDB
+- **IA** : GROQ API (llama-3.3-70b) ou Google Gemini
+- **Templates** : Docxtemplater pour la génération Word
+- **Déploiement** : Vercel
+
+## 📚 Documentation
+Les plans de leçon générés incluent :
+- Titre d'unité
+- Méthodes d'enseignement
+- Outils pédagogiques
+- Objectifs d'apprentissage
+- Étapes chronométrées (45 min)
+- Ressources et devoirs
+- Différenciation pédagogique
+
+---
+
+**Dernière mise à jour:** 2026-01-21
+# Build: 20260121-072644
+
+# Deploy: 2026-01-21 11:24:15
+# Deploy: 2026-01-23 11:48:03 UTC
+# Deploy: 2026-01-23 12:17:09 UTC - Correction critique USE_GROQ
+# Force deploy: 2026-01-23 19:18:37 UTC - Bouton disquette
+
+🔄 Redéploiement: 2026-01-23 21:55:53 - Test bouton disquette BLEU→VERT
+
+🔄 FORCE REDEPLOY: 2026-01-23 22:22:05 - Corrections colonnes + noms enseignants
