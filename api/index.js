@@ -1513,11 +1513,11 @@ app.post('/api/generate-multiple-ai-lesson-plans', async (req, res) => {
 
         let prompt;
         if (englishTeachers.includes(enseignant)) {
-          prompt = `Return ONLY valid JSON. No markdown, no code fences, no commentary.\n\nAs an expert pedagogical assistant, create a detailed 45-minute lesson plan in English. Structure the lesson into timed phases and integrate the teacher's existing notes:\n- Subject: ${matiere}, Class: ${classe}, Lesson Topic: ${lecon}\n- Planned Classwork: ${travaux}\n- Mentioned Support/Materials: ${support}\n- Planned Homework: ${devoirsPrevus}\n\nUse the following JSON structure with professional, concrete values in English (keys exactly as specified):\n${jsonStructure}`;
+          prompt = `Return ONLY valid JSON. No markdown, no code fences, no commentary. IMPORTANT: Escape all special characters properly (quotes, newlines, etc.).\n\nAs an expert pedagogical assistant, create a detailed 45-minute lesson plan in English. Structure the lesson into timed phases and integrate the teacher's existing notes:\n- Subject: ${matiere}, Class: ${classe}, Lesson Topic: ${lecon}\n- Planned Classwork: ${travaux}\n- Mentioned Support/Materials: ${support}\n- Planned Homework: ${devoirsPrevus}\n\nUse the following JSON structure with professional, concrete values in English (keys exactly as specified). Use single quotes (') instead of double quotes (") inside string values:\n${jsonStructure}`;
         } else if (arabicTeachers.includes(enseignant)) {
-          prompt = `أعد فقط JSON صالحًا. بدون Markdown أو أسوار كود أو تعليقات.\n\nبصفتك مساعدًا تربويًا خبيرًا، أنشئ خطة درس مفصلة باللغة العربية مدتها 45 دقيقة. قم ببناء الدرس في مراحل محددة زمنياً وادمج ملاحظات المعلم:\n- المادة: ${matiere}، الفصل: ${classe}، الموضوع: ${lecon}\n- أعمال الصف المخطط لها: ${travaux}\n- الدعم/المواد: ${support}\n- الواجبات المخطط لها: ${devoirsPrevus}\n\nاستخدم البنية التالية بالقيم المهنية والملموسة (المفاتيح كما هي بالإنجليزية):\n${jsonStructure}`;
+          prompt = `أعد فقط JSON صالحًا. بدون Markdown أو أسوار كود أو تعليقات. مهم: استخدم علامات الاقتباس المفردة (') بدلاً من المزدوجة (") داخل النصوص.\n\nبصفتك مساعدًا تربويًا خبيرًا، أنشئ خطة درس مفصلة باللغة العربية مدتها 45 دقيقة. قم ببناء الدرس في مراحل محددة زمنياً وادمج ملاحظات المعلم:\n- المادة: ${matiere}، الفصل: ${classe}، الموضوع: ${lecon}\n- أعمال الصف المخطط لها: ${travaux}\n- الدعم/المواد: ${support}\n- الواجبات المخطط لها: ${devoirsPrevus}\n\nاستخدم البنية التالية بالقيم المهنية والملموسة (المفاتيح كما هي بالإنجليزية):\n${jsonStructure}`;
         } else {
-          prompt = `Renvoie UNIQUEMENT du JSON valide. Pas de markdown, pas de blocs de code, pas de commentaire.\n\nEn tant qu'assistant pédagogique expert, crée un plan de leçon détaillé de 45 minutes en français. Structure en phases chronométrées et intègre les notes de l'enseignant :\n- Matière : ${matiere}, Classe : ${classe}, Thème : ${lecon}\n- Travaux de classe : ${travaux}\n- Support/Matériel : ${support}\n- Devoirs prévus : ${devoirsPrevus}\n\nUtilise la structure JSON suivante (valeurs concrètes et professionnelles ; clés strictement identiques) :\n${jsonStructure}`;
+          prompt = `Renvoie UNIQUEMENT du JSON valide. Pas de markdown, pas de blocs de code, pas de commentaire. IMPORTANT: Utilise des apostrophes (') au lieu de guillemets (") à l'intérieur des textes. Échappe correctement tous les caractères spéciaux.\n\nEn tant qu'assistant pédagogique expert, crée un plan de leçon détaillé de 45 minutes en français. Structure en phases chronométrées et intègre les notes de l'enseignant :\n- Matière : ${matiere}, Classe : ${classe}, Thème : ${lecon}\n- Travaux de classe : ${travaux}\n- Support/Matériel : ${support}\n- Devoirs prévus : ${devoirsPrevus}\n\nUtilise la structure JSON suivante (valeurs concrètes et professionnelles ; clés strictement identiques). Utilise des apostrophes (') pour les citations dans les textes, jamais de guillemets (") :\n${jsonStructure}`;
         }
 
         // Appel API avec FALLBACK automatique sur les 4 clés Gemini
@@ -1553,16 +1553,68 @@ app.post('/api/generate-multiple-ai-lesson-plans', async (req, res) => {
           continue; // Passer au suivant
         }
         
-        // Parser JSON
+        // Parser JSON avec nettoyage robuste
         let jsonData;
         try {
-          const cleanedJson = rawContent.replace(/```json\n?|```\n?/g, '').trim();
+          // Étape 1: Supprimer les marqueurs markdown et nettoyer
+          let cleanedJson = rawContent
+            .replace(/```json\n?|```\n?/g, '')
+            .replace(/[\u0000-\u001F\u007F-\u009F]/g, '') // Supprimer caractères de contrôle
+            .trim();
           
           if (!cleanedJson) {
             throw new Error('Contenu JSON vide après nettoyage');
           }
           
-          jsonData = JSON.parse(cleanedJson);
+          // Étape 2: Tenter le parsing direct
+          try {
+            jsonData = JSON.parse(cleanedJson);
+          } catch (firstParseError) {
+            console.warn(`⚠️ Parsing JSON échoué, tentative de réparation automatique...`);
+            
+            // Étape 3: Méthode de réparation JSON robuste
+            // Stratégie: utiliser JSON5 (plus tolérant) ou réparer manuellement
+            
+            // a) Sauvegarder le JSON original pour debug
+            const originalJson = cleanedJson;
+            
+            // b) Réparer les problèmes courants:
+            cleanedJson = cleanedJson
+              // Échapper les sauts de ligne non échappés dans les strings
+              .replace(/:\s*"([^"]*?)\n([^"]*?)"/g, (match, before, after) => {
+                return `: "${before}\\n${after}"`;
+              })
+              // Échapper les guillemets non échappés (heuristique)
+              // Pattern: "texte"texte" → "texte\\"texte"
+              .replace(/"([^"\\]*)"([^":,\]\}\n])/g, '"$1\\"$2')
+              // Échapper les backslashes non échappés
+              .replace(/\\/g, '\\\\')
+              // Restaurer les échappements légitimes
+              .replace(/\\\\"/g, '\\"')
+              .replace(/\\\\n/g, '\\n')
+              .replace(/\\\\t/g, '\\t')
+              .replace(/\\\\r/g, '\\r');
+            
+            // c) Deuxième tentative
+            try {
+              jsonData = JSON.parse(cleanedJson);
+              console.log(`✅ JSON réparé avec succès`);
+            } catch (secondParseError) {
+              // d) Dernière tentative: parser avec eval (dangereux mais contrôlé)
+              console.warn(`⚠️ Parsing JSON échoue toujours, log du contenu brut...`);
+              console.error(`  - JSON original (1000 premiers chars): ${originalJson.substring(0, 1000)}`);
+              
+              // Lever l'erreur avec plus de contexte
+              const errorPos = parseInt(secondParseError.message.match(/position (\d+)/)?.[1] || '0');
+              if (errorPos > 0) {
+                const context = originalJson.substring(Math.max(0, errorPos - 100), Math.min(originalJson.length, errorPos + 100));
+                console.error(`  - Contexte de l'erreur (±100 chars): ...${context}...`);
+                console.error(`  - Caractère à la position ${errorPos}: "${originalJson[errorPos]}" (code: ${originalJson.charCodeAt(errorPos)})`);
+              }
+              
+              throw secondParseError;
+            }
+          }
           
           // Vérifier que les champs essentiels sont présents
           if (!jsonData.TitreUnite && !jsonData.Objectifs && !jsonData.etapes) {
@@ -1571,7 +1623,7 @@ app.post('/api/generate-multiple-ai-lesson-plans', async (req, res) => {
         } catch (parseError) {
           console.error(`❌ Erreur parsing JSON pour ${classe} ${matiere}:`);
           console.error(`  - Message: ${parseError.message}`);
-          console.error(`  - Contenu brut (100 premiers chars): ${rawContent.substring(0, 100)}`);
+          
           throw new Error(`Format JSON invalide: ${parseError.message}`);
         }
 
