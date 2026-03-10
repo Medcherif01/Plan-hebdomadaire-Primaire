@@ -17,16 +17,34 @@ LESSON_TEMPLATE_URL = https://url-de-votre-template-lesson.docx
 
 ### 3️⃣ Clés API Gemini (4 clés pour rotation automatique)
 
-Obtenir les clés sur : https://aistudio.google.com/apikey
+**🔴 IMPORTANT : CRÉEZ DE NOUVELLES CLÉS !**
+
+Les anciennes clés fournies sont **COMPROMISES** (leaked) et **BLOQUÉES** par Google.
+
+#### **Comment créer 4 nouvelles clés :**
+
+1. Allez sur : https://aistudio.google.com/apikey
+2. **Créez 4 PROJETS GOOGLE CLOUD différents** (pour maximiser le quota gratuit)
+3. Pour chaque projet :
+   - Cliquez sur **"Create API Key"**
+   - Copiez la clé (format : `AIza...` avec 39 caractères)
+   - **NE PARTAGEZ JAMAIS** ces clés (GitHub, Discord, email, etc.)
+
+#### **Ajoutez-les sur Vercel :**
 
 ```
-GEMINI_API_KEY_1 = AIzaSyDLDCwMavSbt36Bkh3F6iAgYYCWorZxhPw
-GEMINI_API_KEY_2 = AIzaSyB4_e8zEn-vFvnX85y7JqBW4QlLlWPUbhY
-GEMINI_API_KEY_3 = AIzaSyAW-2t4Gx_Yyj6iY08vqSSSwTIDOOUiTiA
-GEMINI_API_KEY_4 = AIzaSyCpKFTaGNhPIDjF7C3Pd1V1gCHq6V97kDA
+GEMINI_API_KEY_1 = [Votre nouvelle clé du projet 1]
+GEMINI_API_KEY_2 = [Votre nouvelle clé du projet 2]
+GEMINI_API_KEY_3 = [Votre nouvelle clé du projet 3]
+GEMINI_API_KEY_4 = [Votre nouvelle clé du projet 4]
 ```
 
-**⚠️ Important** : Le système bascule automatiquement entre les 4 clés quand une atteint son quota. Si vous n'avez que 2 ou 3 clés, le système s'adaptera automatiquement.
+**⚠️ Sécurité** : 
+- ✅ Les clés DOIVENT être dans les variables d'environnement Vercel
+- ❌ NE JAMAIS mettre de vraies clés dans le code source
+- ❌ NE JAMAIS commit/push de clés sur GitHub
+
+**💡 Astuce** : Le système bascule automatiquement entre les 4 clés quand une atteint son quota. Si vous n'avez que 2 ou 3 clés, le système s'adaptera automatiquement.
 
 ### 4️⃣ VAPID Keys (Web Push Notifications)
 ```

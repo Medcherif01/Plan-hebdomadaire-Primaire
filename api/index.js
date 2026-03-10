@@ -93,20 +93,47 @@ const WORD_TEMPLATE_URL = process.env.WORD_TEMPLATE_URL;
 const LESSON_TEMPLATE_URL = process.env.LESSON_TEMPLATE_URL;
 
 // Configuration IA Providers - Pool de clés Gemini avec rotation automatique
-// Les clés peuvent être définies via variables d'environnement ou en dur
+// ⚠️ SÉCURITÉ : Les clés API DOIVENT être définies dans les variables d'environnement Vercel
+// Ne JAMAIS mettre de vraies clés API dans le code source (risque de leak sur GitHub)
 const GEMINI_API_KEYS = [
-  process.env.GEMINI_API_KEY_1 || 'AIzaSyDLDCwMavSbt36Bkh3F6iAgYYCWorZxhPw', // API1
-  process.env.GEMINI_API_KEY_2 || 'AIzaSyB4_e8zEn-vFvnX85y7JqBW4QlLlWPUbhY', // API2
-  process.env.GEMINI_API_KEY_3 || 'AIzaSyAW-2t4Gx_Yyj6iY08vqSSSwTIDOOUiTiA', // API3
-  process.env.GEMINI_API_KEY_4 || 'AIzaSyCpKFTaGNhPIDjF7C3Pd1V1gCHq6V97kDA'  // API4
-].filter(key => key && key.length > 10); // Filtrer les clés vides ou invalides
+  process.env.GEMINI_API_KEY_1,
+  process.env.GEMINI_API_KEY_2,
+  process.env.GEMINI_API_KEY_3,
+  process.env.GEMINI_API_KEY_4
+].filter(key => key && key.length > 30); // Filtrer les clés vides ou invalides (clés Gemini = 39 chars)
 
 // Valider qu'au moins une clé est disponible
 if (GEMINI_API_KEYS.length === 0) {
+  console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.error('❌ ERREUR CRITIQUE: Aucune clé API Gemini valide configurée !');
-  console.error('   Définissez GEMINI_API_KEY_1, GEMINI_API_KEY_2, etc. dans les variables d\'environnement');
+  console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.error('');
+  console.error('📋 ÉTAPES POUR RÉSOUDRE :');
+  console.error('');
+  console.error('1️⃣  Créez 4 nouvelles clés API sur: https://aistudio.google.com/apikey');
+  console.error('    (Utilisez 4 projets Google Cloud différents pour plus de quota)');
+  console.error('');
+  console.error('2️⃣  Sur Vercel, allez dans Settings → Environment Variables');
+  console.error('');
+  console.error('3️⃣  Ajoutez ces 4 variables (avec VOS nouvelles clés) :');
+  console.error('    • GEMINI_API_KEY_1 = votre_nouvelle_clé_1');
+  console.error('    • GEMINI_API_KEY_2 = votre_nouvelle_clé_2');
+  console.error('    • GEMINI_API_KEY_3 = votre_nouvelle_clé_3');
+  console.error('    • GEMINI_API_KEY_4 = votre_nouvelle_clé_4');
+  console.error('');
+  console.error('4️⃣  Redéployez le projet (Deployments → Redeploy)');
+  console.error('');
+  console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.error('');
+  console.error('⚠️  Le serveur va démarrer mais la génération de plans IA échouera.');
+  console.error('');
 } else {
-  console.log(`✅ ${GEMINI_API_KEYS.length} clé(s) API Gemini configurée(s)`);
+  console.log(`✅ ${GEMINI_API_KEYS.length} clé(s) API Gemini valide(s) configurée(s)`);
+  // Masquer les clés dans les logs (afficher seulement les 8 premiers et 4 derniers caractères)
+  GEMINI_API_KEYS.forEach((key, index) => {
+    const masked = `${key.substring(0, 8)}...${key.substring(key.length - 4)}`;
+    console.log(`   Clé ${index + 1}: ${masked}`);
+  });
 }
 
 // Ancienne configuration (conservée pour compatibilité)
@@ -313,7 +340,21 @@ async function callGeminiWithFallback(prompt) {
         // Quota épuisé, essayer la clé suivante
         const errorBody = await response.json().catch(() => ({}));
         console.warn(`⚠️ [Gemini] Quota épuisé pour API${keyNumber}, essai clé suivante...`);
-        lastError = new Error(`Quota Gemini API${keyNumber} épuisé`);
+        lastError = new Error(`Quota Gemini API${keyNumber} épuisé - Réessayez demain ou utilisez une autre clé`);
+        continue;
+      } else if (response.status === 403) {
+        // Clé compromise ou invalide
+        const errorBody = await response.json().catch(() => ({}));
+        const errorMsg = errorBody.error?.message || 'Permission denied';
+        
+        if (errorMsg.includes('leaked') || errorMsg.includes('reported')) {
+          console.error(`🔴 [Gemini] CLÉ API${keyNumber} COMPROMISE/LEAKÉE ! Remplacez-la immédiatement.`);
+          console.error(`   Message: ${errorMsg}`);
+          lastError = new Error(`Clé API${keyNumber} compromise - Créez une nouvelle clé sur https://aistudio.google.com/apikey`);
+        } else {
+          console.error(`❌ [Gemini] Accès refusé pour API${keyNumber}: ${errorMsg}`);
+          lastError = new Error(`Clé API${keyNumber} invalide ou permissions insuffisantes`);
+        }
         continue;
       } else {
         // Autre erreur, essayer la clé suivante
