@@ -1209,7 +1209,7 @@ app.post('/api/generate-ai-lesson-plan', async (req, res) => {
 
     let prompt;
     if (englishTeachers.includes(enseignant)) {
-      prompt = `Return ONLY valid JSON. No markdown, no code fences, no commentary.
+      prompt = `Return ONLY valid JSON. No markdown, no code fences, no commentary. IMPORTANT: Escape all special characters properly (quotes, newlines, etc.).
 
 As an expert pedagogical assistant, create a detailed 45-minute lesson plan in English. Structure the lesson into timed phases and integrate the teacher's existing notes:
 - Subject: ${matiere}, Class: ${classe}, Lesson Topic: ${lecon}
@@ -1217,10 +1217,10 @@ As an expert pedagogical assistant, create a detailed 45-minute lesson plan in E
 - Mentioned Support/Materials: ${support}
 - Planned Homework: ${devoirsPrevus}
 
-Use the following JSON structure with professional, concrete values in English (keys exactly as specified):
+Use the following JSON structure with professional, concrete values in English (keys exactly as specified). Use single quotes (') instead of double quotes (") inside string values:
 ${jsonStructure}`;
     } else if (arabicTeachers.includes(enseignant)) {
-      prompt = `أعد فقط JSON صالحًا. بدون Markdown أو أسوار كود أو تعليقات.
+      prompt = `أعد فقط JSON صالحًا. بدون Markdown أو أسوار كود أو تعليقات. مهم: استخدم علامات الاقتباس المفردة (') بدلاً من المزدوجة (") داخل النصوص.
 
 بصفتك مساعدًا تربويًا خبيرًا، أنشئ خطة درس مفصلة باللغة العربية مدتها 45 دقيقة. قم ببناء الدرس في مراحل محددة زمنياً وادمج ملاحظات المعلم:
 - المادة: ${matiere}، الفصل: ${classe}، الموضوع: ${lecon}
@@ -1231,7 +1231,7 @@ ${jsonStructure}`;
 استخدم البنية التالية بالقيم المهنية والملموسة (المفاتيح كما هي بالإنجليزية):
 ${jsonStructure}`;
     } else {
-      prompt = `Renvoie UNIQUEMENT du JSON valide. Pas de markdown, pas de blocs de code, pas de commentaire.
+      prompt = `Renvoie UNIQUEMENT du JSON valide. Pas de markdown, pas de blocs de code, pas de commentaire. IMPORTANT: Utilise des apostrophes (') au lieu de guillemets (") à l'intérieur des textes. Échappe correctement tous les caractères spéciaux.
 
 En tant qu'assistant pédagogique expert, crée un plan de leçon détaillé de 45 minutes en français. Structure en phases chronométrées et intègre les notes de l'enseignant :
 - Matière : ${matiere}, Classe : ${classe}, Thème : ${lecon}
@@ -1239,7 +1239,7 @@ En tant qu'assistant pédagogique expert, crée un plan de leçon détaillé de 
 - Support/Matériel : ${support}
 - Devoirs prévus : ${devoirsPrevus}
 
-Utilise la structure JSON suivante (valeurs concrètes et professionnelles ; clés strictement identiques) :
+Utilise la structure JSON suivante (valeurs concrètes et professionnelles ; clés strictement identiques). Utilise des apostrophes (') pour les citations dans les textes, jamais de guillemets (") :
 ${jsonStructure}`;
     }
 
@@ -1274,13 +1274,68 @@ ${jsonStructure}`;
       return res.status(500).json({ message: "Réponse IA vide ou non reconnue." });
     }
 
-    // Parse JSON avec petit nettoyage si Markdown accidentel
+    // Parse JSON avec nettoyage robuste (même logique que génération multiple)
     let aiData;
     try {
-      aiData = JSON.parse(text);
-    } catch {
-      const cleaned = text.replace(/^```json\s*|\s*```$/g, '').trim();
-      aiData = JSON.parse(cleaned);
+      // Étape 1: Supprimer les marqueurs markdown et nettoyer
+      let cleanedJson = text
+        .replace(/```json\n?|```\n?/g, '')
+        .replace(/[\u0000-\u001F\u007F-\u009F]/g, '') // Supprimer caractères de contrôle
+        .trim();
+      
+      if (!cleanedJson) {
+        throw new Error('Contenu JSON vide après nettoyage');
+      }
+      
+      // Étape 2: Tenter le parsing direct
+      try {
+        aiData = JSON.parse(cleanedJson);
+      } catch (firstParseError) {
+        console.warn(`⚠️ [Single Plan] Parsing JSON échoué, tentative de réparation...`);
+        
+        // Étape 3: Réparation automatique
+        const originalJson = cleanedJson;
+        cleanedJson = cleanedJson
+          // Échapper les sauts de ligne non échappés
+          .replace(/:\s*"([^"]*?)\n([^"]*?)"/g, (match, before, after) => {
+            return `: "${before}\\n${after}"`;
+          })
+          // Échapper les guillemets non échappés (heuristique)
+          .replace(/"([^"\\]*)"([^":,\]\}\n])/g, '"$1\\"$2')
+          // Échapper les backslashes
+          .replace(/\\/g, '\\\\')
+          // Restaurer les échappements légitimes
+          .replace(/\\\\"/g, '\\"')
+          .replace(/\\\\n/g, '\\n')
+          .replace(/\\\\t/g, '\\t')
+          .replace(/\\\\r/g, '\\r');
+        
+        // Deuxième tentative
+        try {
+          aiData = JSON.parse(cleanedJson);
+          console.log(`✅ [Single Plan] JSON réparé avec succès`);
+        } catch (secondParseError) {
+          console.error(`❌ [Single Plan] Parsing JSON échoue après réparation`);
+          console.error(`  - JSON original (500 premiers chars): ${originalJson.substring(0, 500)}`);
+          
+          const errorPos = parseInt(secondParseError.message.match(/position (\d+)/)?.[1] || '0');
+          if (errorPos > 0) {
+            const context = originalJson.substring(Math.max(0, errorPos - 100), Math.min(originalJson.length, errorPos + 100));
+            console.error(`  - Contexte de l'erreur (±100 chars): ...${context}...`);
+          }
+          
+          throw secondParseError;
+        }
+      }
+      
+      // Vérifier que les champs essentiels sont présents
+      if (!aiData.TitreUnite && !aiData.Objectifs && !aiData.etapes) {
+        throw new Error('Structure JSON invalide : champs essentiels manquants');
+      }
+    } catch (parseError) {
+      console.error(`❌ [Single Plan] Erreur parsing JSON:`);
+      console.error(`  - Message: ${parseError.message}`);
+      throw new Error(`Format JSON invalide: ${parseError.message}`);
     }
 
     // Préparer le DOCX
