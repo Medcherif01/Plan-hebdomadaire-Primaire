@@ -93,12 +93,21 @@ const WORD_TEMPLATE_URL = process.env.WORD_TEMPLATE_URL;
 const LESSON_TEMPLATE_URL = process.env.LESSON_TEMPLATE_URL;
 
 // Configuration IA Providers - Pool de clés Gemini avec rotation automatique
+// Les clés peuvent être définies via variables d'environnement ou en dur
 const GEMINI_API_KEYS = [
-  'AIzaSyDLDCwMavSbt36Bkh3F6iAgYYCWorZxhPw', // API1
-  'AIzaSyBEJaRwtHch_MxisoGJM5pSMnTvN7DNDcg', // API2
-  'AIzaSyAx9NtIojX8SWZmq1xNsnbUCRxiX7V5aSg', // API3
-  'AIzaSyC5PfIgEsPE3fzKIP9NjWaF7EqlP8XYPxc'  // API4
-];
+  process.env.GEMINI_API_KEY_1 || 'AIzaSyDLDCwMavSbt36Bkh3F6iAgYYCWorZxhPw', // API1
+  process.env.GEMINI_API_KEY_2 || 'AIzaSyB4_e8zEn-vFvnX85y7JqBW4QlLlWPUbhY', // API2
+  process.env.GEMINI_API_KEY_3 || 'AIzaSyAW-2t4Gx_Yyj6iY08vqSSSwTIDOOUiTiA', // API3
+  process.env.GEMINI_API_KEY_4 || 'AIzaSyCpKFTaGNhPIDjF7C3Pd1V1gCHq6V97kDA'  // API4
+].filter(key => key && key.length > 10); // Filtrer les clés vides ou invalides
+
+// Valider qu'au moins une clé est disponible
+if (GEMINI_API_KEYS.length === 0) {
+  console.error('❌ ERREUR CRITIQUE: Aucune clé API Gemini valide configurée !');
+  console.error('   Définissez GEMINI_API_KEY_1, GEMINI_API_KEY_2, etc. dans les variables d\'environnement');
+} else {
+  console.log(`✅ ${GEMINI_API_KEYS.length} clé(s) API Gemini configurée(s)`);
+}
 
 // Ancienne configuration (conservée pour compatibilité)
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
@@ -274,7 +283,13 @@ async function callGeminiWithFallback(prompt) {
       
       const API_URL = `https://generativelanguage.googleapis.com/v1/models/${MODEL_NAME}:generateContent?key=${apiKey}`;
       const requestBody = {
-        contents: [{ role: "user", parts: [{ text: prompt }] }]
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 2048,
+          topP: 0.95,
+          topK: 40
+        }
       };
       
       console.log(`🔄 [Gemini] Appel API avec clé ${keyNumber}...`);
@@ -282,6 +297,7 @@ async function callGeminiWithFallback(prompt) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody),
+        signal: AbortSignal.timeout(45000) // Timeout de 45 secondes
       });
       
       if (response.ok) {
@@ -1467,10 +1483,23 @@ app.post('/api/generate-multiple-ai-lesson-plans', async (req, res) => {
         let rawContent, usedProvider;
         try {
           const result = await callGeminiWithFallback(prompt);
-          rawContent = result.content;
-          usedProvider = result.provider;
+          
+          // Vérifier que l'appel a réussi
+          if (!result.success) {
+            throw new Error(result.error || 'Toutes les clés API Gemini ont échoué');
+          }
+          
+          // Extraire le contenu de la réponse Gemini
+          rawContent = result.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+          
+          if (!rawContent) {
+            console.error('❌ Structure de réponse invalide:', JSON.stringify(result.data, null, 2));
+            throw new Error('Réponse Gemini vide ou format invalide');
+          }
+          
+          usedProvider = result.provider.replace('Gemini API', 'GEMINI_');
           providerStats[usedProvider]++;
-          console.log(`✅ [${i+1}/${validRows.length}] Généré avec ${usedProvider}`);
+          console.log(`✅ [${i+1}/${validRows.length}] Généré avec ${result.provider}`);
         } catch (apiError) {
           console.error(`❌ [${i+1}/${validRows.length}] Échec après toutes les tentatives:`, apiError.message);
           providerStats.errors++;
