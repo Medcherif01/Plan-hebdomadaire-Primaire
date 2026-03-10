@@ -1204,43 +1204,135 @@ app.post('/api/generate-ai-lesson-plan', async (req, res) => {
       }
     }
 
-    // Prompt + structure JSON
-    const jsonStructure = `{"TitreUnite":"un titre d'unité pertinent pour la leçon","Methodes":"liste des méthodes d'enseignement","Outils":"liste des outils de travail","Objectifs":"une liste concise des objectifs d'apprentissage (compétences, connaissances), séparés par des sauts de ligne (\\\\n). Commence chaque objectif par un tiret (-).","etapes":[{"phase":"Introduction","duree":"5 min","activite":"Description de l'activité d'introduction pour l'enseignant et les élèves."},{"phase":"Activité Principale","duree":"25 min","activite":"Description de l'activité principale, en intégrant les 'travaux de classe' et le 'support' si possible."},{"phase":"Synthèse","duree":"10 min","activite":"Description de l'activité de conclusion et de vérification des acquis."},{"phase":"Clôture","duree":"5 min","activite":"Résumé rapide et annonce des devoirs."}],"Ressources":"les ressources spécifiques à utiliser.","Devoirs":"une suggestion de devoirs.","DiffLents":"une suggestion pour aider les apprenants en difficulté.","DiffTresPerf":"une suggestion pour stimuler les apprenants très performants.","DiffTous":"une suggestion de différenciation pour toute la classe."}`;
+    // ========================================
+    // 🔥 PROMPT OPTIMISÉ (identique au ZIP endpoint)
+    // ========================================
+    const cleanText = (text) => {
+      if (!text) return 'Non spécifié';
+      return text
+        .replace(/"/g, "''")  // Remplacer " par ''
+        .replace(/\\/g, '/')   // Remplacer \ par /
+        .replace(/[\r\n]+/g, ' ') // Remplacer retours à la ligne
+        .replace(/\s+/g, ' ')    // Normaliser espaces
+        .trim();
+    };
+    
+    const safeMatiere = cleanText(matiere);
+    const safeClasse = cleanText(classe);
+    const safeLecon = cleanText(lecon);
+    const safeTravaux = cleanText(travaux);
+    const safeSupport = cleanText(support);
+    const safeDevoirsPrevus = cleanText(devoirsPrevus);
 
     let prompt;
     if (englishTeachers.includes(enseignant)) {
-      prompt = `Return ONLY valid JSON. No markdown, no code fences, no commentary. IMPORTANT: Escape all special characters properly (quotes, newlines, etc.).
+      prompt = `You are a JSON generator. Return ONLY a valid JSON object (no markdown, no code blocks, no extra text).
 
-As an expert pedagogical assistant, create a detailed 45-minute lesson plan in English. Structure the lesson into timed phases and integrate the teacher's existing notes:
-- Subject: ${matiere}, Class: ${classe}, Lesson Topic: ${lecon}
-- Planned Classwork: ${travaux}
-- Mentioned Support/Materials: ${support}
-- Planned Homework: ${devoirsPrevus}
+Create a 45-minute lesson plan with this EXACT structure:
+{
+  "TitreUnite": "relevant unit title",
+  "Methodes": "teaching methods list",
+  "Outils": "tools and materials list",
+  "Objectifs": "learning objectives - one per line with dash prefix",
+  "etapes": [
+    {"phase": "Introduction", "duree": "5 min", "activite": "intro activity description"},
+    {"phase": "Main Activity", "duree": "25 min", "activite": "main activity description"},
+    {"phase": "Summary", "duree": "10 min", "activite": "summary activity"},
+    {"phase": "Closing", "duree": "5 min", "activite": "closing and homework announcement"}
+  ],
+  "Ressources": "specific resources to use",
+  "Devoirs": "homework suggestions",
+  "DiffLents": "support for struggling learners",
+  "DiffTresPerf": "challenges for high achievers",
+  "DiffTous": "whole-class differentiation"
+}
 
-Use the following JSON structure with professional, concrete values in English (keys exactly as specified). Use single quotes (') instead of double quotes (") inside string values:
-${jsonStructure}`;
+Lesson context:
+- Subject: ${safeMatiere}
+- Class: ${safeClasse}
+- Topic: ${safeLecon}
+- Planned classwork: ${safeTravaux}
+- Materials: ${safeSupport}
+- Homework: ${safeDevoirsPrevus}
+
+IMPORTANT RULES:
+1. Use only straight quotes (") for JSON structure
+2. For text content, replace all quotes with apostrophes (')
+3. Keep all text on single lines (no line breaks inside strings)
+4. All keys must be exactly as shown
+5. Return ONLY the JSON object, nothing else`;
     } else if (arabicTeachers.includes(enseignant)) {
-      prompt = `أعد فقط JSON صالحًا. بدون Markdown أو أسوار كود أو تعليقات. مهم: استخدم علامات الاقتباس المفردة (') بدلاً من المزدوجة (") داخل النصوص.
+      prompt = `أنت مولد JSON. أعد فقط كائن JSON صالح (بدون markdown، بدون كتل كود، بدون نص إضافي).
 
-بصفتك مساعدًا تربويًا خبيرًا، أنشئ خطة درس مفصلة باللغة العربية مدتها 45 دقيقة. قم ببناء الدرس في مراحل محددة زمنياً وادمج ملاحظات المعلم:
-- المادة: ${matiere}، الفصل: ${classe}، الموضوع: ${lecon}
-- أعمال الصف المخطط لها: ${travaux}
-- الدعم/المواد: ${support}
-- الواجبات المخطط لها: ${devoirsPrevus}
+أنشئ خطة درس 45 دقيقة بهذا الهيكل الدقيق:
+{
+  "TitreUnite": "عنوان الوحدة",
+  "Methodes": "قائمة طرق التدريس",
+  "Outils": "قائمة الأدوات والمواد",
+  "Objectifs": "الأهداف التعليمية - هدف واحد لكل سطر",
+  "etapes": [
+    {"phase": "المقدمة", "duree": "5 دقائق", "activite": "وصف نشاط المقدمة"},
+    {"phase": "النشاط الرئيسي", "duree": "25 دقيقة", "activite": "وصف النشاط الرئيسي"},
+    {"phase": "الخلاصة", "duree": "10 دقائق", "activite": "نشاط الخلاصة"},
+    {"phase": "الختام", "duree": "5 دقائق", "activite": "الختام والإعلان عن الواجبات"}
+  ],
+  "Ressources": "الموارد المحددة",
+  "Devoirs": "اقتراحات الواجبات",
+  "DiffLents": "دعم المتعلمين البطيئين",
+  "DiffTresPerf": "تحديات للمتفوقين",
+  "DiffTous": "تمايز للصف بأكمله"
+}
 
-استخدم البنية التالية بالقيم المهنية والملموسة (المفاتيح كما هي بالإنجليزية):
-${jsonStructure}`;
+سياق الدرس:
+- المادة: ${safeMatiere}
+- الفصل: ${safeClasse}
+- الموضوع: ${safeLecon}
+- أعمال الصف: ${safeTravaux}
+- المواد: ${safeSupport}
+- الواجبات: ${safeDevoirsPrevus}
+
+قواعد مهمة:
+1. استخدم علامات الاقتباس المستقيمة (") فقط لهيكل JSON
+2. للنص، استبدل جميع علامات الاقتباس بالفواصل العليا (')
+3. احتفظ بكل النص في سطر واحد
+4. يجب أن تكون جميع المفاتيح كما هو موضح بالضبط
+5. أعد كائن JSON فقط، لا شيء آخر`;
     } else {
-      prompt = `Renvoie UNIQUEMENT du JSON valide. Pas de markdown, pas de blocs de code, pas de commentaire. IMPORTANT: Utilise des apostrophes (') au lieu de guillemets (") à l'intérieur des textes. Échappe correctement tous les caractères spéciaux.
+      prompt = `Tu es un générateur JSON. Renvoie UNIQUEMENT un objet JSON valide (pas de markdown, pas de blocs de code, pas de texte supplémentaire).
 
-En tant qu'assistant pédagogique expert, crée un plan de leçon détaillé de 45 minutes en français. Structure en phases chronométrées et intègre les notes de l'enseignant :
-- Matière : ${matiere}, Classe : ${classe}, Thème : ${lecon}
-- Travaux de classe : ${travaux}
-- Support/Matériel : ${support}
-- Devoirs prévus : ${devoirsPrevus}
+Crée un plan de leçon de 45 minutes avec cette structure EXACTE:
+{
+  "TitreUnite": "titre d'unité pertinent",
+  "Methodes": "liste des méthodes pédagogiques",
+  "Outils": "liste des outils et matériels",
+  "Objectifs": "objectifs d'apprentissage - un par ligne avec tiret",
+  "etapes": [
+    {"phase": "Introduction", "duree": "5 min", "activite": "description activité introduction"},
+    {"phase": "Activité Principale", "duree": "25 min", "activite": "description activité principale"},
+    {"phase": "Synthèse", "duree": "10 min", "activite": "activité de synthèse"},
+    {"phase": "Clôture", "duree": "5 min", "activite": "clôture et annonce devoirs"}
+  ],
+  "Ressources": "ressources spécifiques à utiliser",
+  "Devoirs": "suggestions de devoirs",
+  "DiffLents": "soutien pour élèves en difficulté",
+  "DiffTresPerf": "défis pour élèves performants",
+  "DiffTous": "différenciation pour toute la classe"
+}
 
-Utilise la structure JSON suivante (valeurs concrètes et professionnelles ; clés strictement identiques). Utilise des apostrophes (') pour les citations dans les textes, jamais de guillemets (") :
-${jsonStructure}`;
+Contexte de la leçon:
+- Matière: ${safeMatiere}
+- Classe: ${safeClasse}
+- Thème: ${safeLecon}
+- Travaux de classe: ${safeTravaux}
+- Support/Matériel: ${safeSupport}
+- Devoirs prévus: ${safeDevoirsPrevus}
+
+RÈGLES IMPORTANTES:
+1. Utilise uniquement des guillemets droits (") pour la structure JSON
+2. Pour le contenu texte, remplace tous les guillemets par des apostrophes (')
+3. Garde tout le texte sur une seule ligne (pas de sauts de ligne dans les chaînes)
+4. Toutes les clés doivent être exactement comme indiqué
+5. Renvoie UNIQUEMENT l'objet JSON, rien d'autre`;
     }
 
     // === Appeler l'API Gemini avec rotation automatique des clés ===
@@ -1274,67 +1366,96 @@ ${jsonStructure}`;
       return res.status(500).json({ message: "Réponse IA vide ou non reconnue." });
     }
 
-    // Parse JSON avec nettoyage robuste (même logique que génération multiple)
+    // ========================================
+    // 🔥 PARSING JSON ULTRA-ROBUSTE (identique au ZIP)
+    // ========================================
     let aiData;
     try {
-      // Étape 1: Supprimer les marqueurs markdown et nettoyer
       let cleanedJson = text
-        .replace(/```json\n?|```\n?/g, '')
-        .replace(/[\u0000-\u001F\u007F-\u009F]/g, '') // Supprimer caractères de contrôle
+        .replace(/```json\n?|```\n?|```/g, '')
+        .replace(/^[^{]*/, '')
+        .replace(/[^}]*$/, '')
         .trim();
       
-      if (!cleanedJson) {
-        throw new Error('Contenu JSON vide après nettoyage');
+      if (!cleanedJson || cleanedJson.length < 10) {
+        throw new Error('Contenu JSON vide ou trop court');
       }
       
-      // Étape 2: Tenter le parsing direct
       try {
         aiData = JSON.parse(cleanedJson);
+        console.log(`✅ [Single Plan] JSON parsé du premier coup`);
       } catch (firstParseError) {
-        console.warn(`⚠️ [Single Plan] Parsing JSON échoué, tentative de réparation...`);
+        console.warn(`⚠️ [Single Plan] 1er parsing échoué: ${firstParseError.message}`);
         
-        // Étape 3: Réparation automatique
         const originalJson = cleanedJson;
-        cleanedJson = cleanedJson
-          // Échapper les sauts de ligne non échappés
-          .replace(/:\s*"([^"]*?)\n([^"]*?)"/g, (match, before, after) => {
-            return `: "${before}\\n${after}"`;
-          })
-          // Échapper les guillemets non échappés (heuristique)
-          .replace(/"([^"\\]*)"([^":,\]\}\n])/g, '"$1\\"$2')
-          // Échapper les backslashes
-          .replace(/\\/g, '\\\\')
-          // Restaurer les échappements légitimes
-          .replace(/\\\\"/g, '\\"')
-          .replace(/\\\\n/g, '\\n')
-          .replace(/\\\\t/g, '\\t')
-          .replace(/\\\\r/g, '\\r');
         
-        // Deuxième tentative
-        try {
-          aiData = JSON.parse(cleanedJson);
-          console.log(`✅ [Single Plan] JSON réparé avec succès`);
-        } catch (secondParseError) {
-          console.error(`❌ [Single Plan] Parsing JSON échoue après réparation`);
-          console.error(`  - JSON original (500 premiers chars): ${originalJson.substring(0, 500)}`);
+        // Réparation AGRESSIVE
+        cleanedJson = cleanedJson.replace(/\\(?!["'nrtbf\\])/g, '/');
+        cleanedJson = cleanedJson.replace(/"([^"]*?)\n([^"]*?)"/g, (match, before, after) => {
+          return `"${before}\\n${after}"`;
+        });
+        cleanedJson = cleanedJson.replace(/[\u0000-\u001F\u007F-\u009F]/g, '');
+        
+        // Remplacer guillemets orphelins
+        let inString = false;
+        let fixed = '';
+        let lastWasEscape = false;
+        
+        for (let i = 0; i < cleanedJson.length; i++) {
+          const char = cleanedJson[i];
+          const nextChar = cleanedJson[i + 1];
           
-          const errorPos = parseInt(secondParseError.message.match(/position (\d+)/)?.[1] || '0');
-          if (errorPos > 0) {
-            const context = originalJson.substring(Math.max(0, errorPos - 100), Math.min(originalJson.length, errorPos + 100));
-            console.error(`  - Contexte de l'erreur (±100 chars): ...${context}...`);
+          if (char === '\\' && !lastWasEscape) {
+            lastWasEscape = true;
+            fixed += char;
+            continue;
           }
           
-          throw secondParseError;
+          if (char === '"' && !lastWasEscape) {
+            if (inString && nextChar && !/[:,\}\]\n\s]/.test(nextChar)) {
+              fixed += "''";
+              lastWasEscape = false;
+              continue;
+            }
+            inString = !inString;
+          }
+          
+          fixed += char;
+          lastWasEscape = false;
+        }
+        
+        cleanedJson = fixed;
+        
+        try {
+          aiData = JSON.parse(cleanedJson);
+          console.log(`✅ [Single Plan] JSON réparé après corrections`);
+        } catch (secondParseError) {
+          console.error(`❌ [Single Plan] Parsing échoue même après réparation`);
+          console.error(`  - Erreur: ${secondParseError.message}`);
+          
+          const errorPos = parseInt(secondParseError.message.match(/position (\d+)/)?.[1] || '0');
+          if (errorPos > 0 && errorPos < originalJson.length) {
+            const start = Math.max(0, errorPos - 150);
+            const end = Math.min(originalJson.length, errorPos + 150);
+            const context = originalJson.substring(start, end);
+            const pointer = ' '.repeat(Math.min(150, errorPos - start)) + '^';
+            console.error(`  - Contexte (±150 chars):\n${context}\n${pointer}`);
+          }
+          
+          console.error(`  - JSON (premiers 2000 chars):\n${originalJson.substring(0, 2000)}`);
+          throw new Error(`Parsing JSON impossible: ${secondParseError.message}`);
         }
       }
       
-      // Vérifier que les champs essentiels sont présents
+      if (!aiData || typeof aiData !== 'object') {
+        throw new Error('JSON parsé mais structure invalide');
+      }
+      
       if (!aiData.TitreUnite && !aiData.Objectifs && !aiData.etapes) {
-        throw new Error('Structure JSON invalide : champs essentiels manquants');
+        throw new Error('Structure JSON invalide: champs essentiels manquants');
       }
     } catch (parseError) {
-      console.error(`❌ [Single Plan] Erreur parsing JSON:`);
-      console.error(`  - Message: ${parseError.message}`);
+      console.error(`❌ [Single Plan] Erreur parsing JSON: ${parseError.message}`);
       throw new Error(`Format JSON invalide: ${parseError.message}`);
     }
 
@@ -1563,16 +1684,139 @@ app.post('/api/generate-multiple-ai-lesson-plans', async (req, res) => {
           }
         }
 
-        // Prompt selon la langue de l'enseignant
-        const jsonStructure = `{"TitreUnite":"un titre d'unité pertinent pour la leçon","Methodes":"liste des méthodes d'enseignement","Outils":"liste des outils de travail","Objectifs":"une liste concise des objectifs d'apprentissage (compétences, connaissances), séparés par des sauts de ligne (\\\\n). Commence chaque objectif par un tiret (-).","etapes":[{"phase":"Introduction","duree":"5 min","activite":"Description de l'activité d'introduction pour l'enseignant et les élèves."},{"phase":"Activité Principale","duree":"25 min","activite":"Description de l'activité principale, en intégrant les 'travaux de classe' et le 'support' si possible."},{"phase":"Synthèse","duree":"10 min","activite":"Description de l'activité de conclusion et de vérification des acquis."},{"phase":"Clôture","duree":"5 min","activite":"Résumé rapide et annonce des devoirs."}],"Ressources":"les ressources spécifiques à utiliser.","Devoirs":"une suggestion de devoirs.","DiffLents":"une suggestion pour aider les apprenants en difficulté.","DiffTresPerf":"une suggestion pour stimuler les apprenants très performants.","DiffTous":"une suggestion de différenciation pour toute la classe."}`;
+        // ========================================
+        // 🔥 PROMPT OPTIMISÉ POUR FORCER JSON VALIDE
+        // ========================================
+        // Stratégie : Mode JSON de Gemini avec contraintes strictes
+        // + nettoyage des données d'entrée pour éviter pollution
+        
+        // Nettoyer les données d'entrée des caractères problématiques
+        const cleanText = (text) => {
+          if (!text) return 'Non spécifié';
+          return text
+            .replace(/"/g, "''")  // Remplacer " par ''
+            .replace(/\\/g, '/')   // Remplacer \ par /
+            .replace(/[\r\n]+/g, ' ') // Remplacer retours à la ligne par espace
+            .replace(/\s+/g, ' ')    // Normaliser espaces multiples
+            .trim();
+        };
+        
+        const safeMatiere = cleanText(matiere);
+        const safeClasse = cleanText(classe);
+        const safeLecon = cleanText(lecon);
+        const safeTravaux = cleanText(travaux);
+        const safeSupport = cleanText(support);
+        const safeDevoirsPrevus = cleanText(devoirsPrevus);
 
         let prompt;
         if (englishTeachers.includes(enseignant)) {
-          prompt = `Return ONLY valid JSON. No markdown, no code fences, no commentary. IMPORTANT: Escape all special characters properly (quotes, newlines, etc.).\n\nAs an expert pedagogical assistant, create a detailed 45-minute lesson plan in English. Structure the lesson into timed phases and integrate the teacher's existing notes:\n- Subject: ${matiere}, Class: ${classe}, Lesson Topic: ${lecon}\n- Planned Classwork: ${travaux}\n- Mentioned Support/Materials: ${support}\n- Planned Homework: ${devoirsPrevus}\n\nUse the following JSON structure with professional, concrete values in English (keys exactly as specified). Use single quotes (') instead of double quotes (") inside string values:\n${jsonStructure}`;
+          prompt = `You are a JSON generator. Return ONLY a valid JSON object (no markdown, no code blocks, no extra text).
+
+Create a 45-minute lesson plan with this EXACT structure:
+{
+  "TitreUnite": "relevant unit title",
+  "Methodes": "teaching methods list",
+  "Outils": "tools and materials list",
+  "Objectifs": "learning objectives - one per line with dash prefix",
+  "etapes": [
+    {"phase": "Introduction", "duree": "5 min", "activite": "intro activity description"},
+    {"phase": "Main Activity", "duree": "25 min", "activite": "main activity description"},
+    {"phase": "Summary", "duree": "10 min", "activite": "summary activity"},
+    {"phase": "Closing", "duree": "5 min", "activite": "closing and homework announcement"}
+  ],
+  "Ressources": "specific resources to use",
+  "Devoirs": "homework suggestions",
+  "DiffLents": "support for struggling learners",
+  "DiffTresPerf": "challenges for high achievers",
+  "DiffTous": "whole-class differentiation"
+}
+
+Lesson context:
+- Subject: ${safeMatiere}
+- Class: ${safeClasse}
+- Topic: ${safeLecon}
+- Planned classwork: ${safeTravaux}
+- Materials: ${safeSupport}
+- Homework: ${safeDevoirsPrevus}
+
+IMPORTANT RULES:
+1. Use only straight quotes (") for JSON structure
+2. For text content, replace all quotes with apostrophes (')
+3. Keep all text on single lines (no line breaks inside strings)
+4. All keys must be exactly as shown
+5. Return ONLY the JSON object, nothing else`;
         } else if (arabicTeachers.includes(enseignant)) {
-          prompt = `أعد فقط JSON صالحًا. بدون Markdown أو أسوار كود أو تعليقات. مهم: استخدم علامات الاقتباس المفردة (') بدلاً من المزدوجة (") داخل النصوص.\n\nبصفتك مساعدًا تربويًا خبيرًا، أنشئ خطة درس مفصلة باللغة العربية مدتها 45 دقيقة. قم ببناء الدرس في مراحل محددة زمنياً وادمج ملاحظات المعلم:\n- المادة: ${matiere}، الفصل: ${classe}، الموضوع: ${lecon}\n- أعمال الصف المخطط لها: ${travaux}\n- الدعم/المواد: ${support}\n- الواجبات المخطط لها: ${devoirsPrevus}\n\nاستخدم البنية التالية بالقيم المهنية والملموسة (المفاتيح كما هي بالإنجليزية):\n${jsonStructure}`;
+          prompt = `أنت مولد JSON. أعد فقط كائن JSON صالح (بدون markdown، بدون كتل كود، بدون نص إضافي).
+
+أنشئ خطة درس 45 دقيقة بهذا الهيكل الدقيق:
+{
+  "TitreUnite": "عنوان الوحدة",
+  "Methodes": "قائمة طرق التدريس",
+  "Outils": "قائمة الأدوات والمواد",
+  "Objectifs": "الأهداف التعليمية - هدف واحد لكل سطر",
+  "etapes": [
+    {"phase": "المقدمة", "duree": "5 دقائق", "activite": "وصف نشاط المقدمة"},
+    {"phase": "النشاط الرئيسي", "duree": "25 دقيقة", "activite": "وصف النشاط الرئيسي"},
+    {"phase": "الخلاصة", "duree": "10 دقائق", "activite": "نشاط الخلاصة"},
+    {"phase": "الختام", "duree": "5 دقائق", "activite": "الختام والإعلان عن الواجبات"}
+  ],
+  "Ressources": "الموارد المحددة",
+  "Devoirs": "اقتراحات الواجبات",
+  "DiffLents": "دعم المتعلمين البطيئين",
+  "DiffTresPerf": "تحديات للمتفوقين",
+  "DiffTous": "تمايز للصف بأكمله"
+}
+
+سياق الدرس:
+- المادة: ${safeMatiere}
+- الفصل: ${safeClasse}
+- الموضوع: ${safeLecon}
+- أعمال الصف: ${safeTravaux}
+- المواد: ${safeSupport}
+- الواجبات: ${safeDevoirsPrevus}
+
+قواعد مهمة:
+1. استخدم علامات الاقتباس المستقيمة (") فقط لهيكل JSON
+2. للنص، استبدل جميع علامات الاقتباس بالفواصل العليا (')
+3. احتفظ بكل النص في سطر واحد
+4. يجب أن تكون جميع المفاتيح كما هو موضح بالضبط
+5. أعد كائن JSON فقط، لا شيء آخر`;
         } else {
-          prompt = `Renvoie UNIQUEMENT du JSON valide. Pas de markdown, pas de blocs de code, pas de commentaire. IMPORTANT: Utilise des apostrophes (') au lieu de guillemets (") à l'intérieur des textes. Échappe correctement tous les caractères spéciaux.\n\nEn tant qu'assistant pédagogique expert, crée un plan de leçon détaillé de 45 minutes en français. Structure en phases chronométrées et intègre les notes de l'enseignant :\n- Matière : ${matiere}, Classe : ${classe}, Thème : ${lecon}\n- Travaux de classe : ${travaux}\n- Support/Matériel : ${support}\n- Devoirs prévus : ${devoirsPrevus}\n\nUtilise la structure JSON suivante (valeurs concrètes et professionnelles ; clés strictement identiques). Utilise des apostrophes (') pour les citations dans les textes, jamais de guillemets (") :\n${jsonStructure}`;
+          prompt = `Tu es un générateur JSON. Renvoie UNIQUEMENT un objet JSON valide (pas de markdown, pas de blocs de code, pas de texte supplémentaire).
+
+Crée un plan de leçon de 45 minutes avec cette structure EXACTE:
+{
+  "TitreUnite": "titre d'unité pertinent",
+  "Methodes": "liste des méthodes pédagogiques",
+  "Outils": "liste des outils et matériels",
+  "Objectifs": "objectifs d'apprentissage - un par ligne avec tiret",
+  "etapes": [
+    {"phase": "Introduction", "duree": "5 min", "activite": "description activité introduction"},
+    {"phase": "Activité Principale", "duree": "25 min", "activite": "description activité principale"},
+    {"phase": "Synthèse", "duree": "10 min", "activite": "activité de synthèse"},
+    {"phase": "Clôture", "duree": "5 min", "activite": "clôture et annonce devoirs"}
+  ],
+  "Ressources": "ressources spécifiques à utiliser",
+  "Devoirs": "suggestions de devoirs",
+  "DiffLents": "soutien pour élèves en difficulté",
+  "DiffTresPerf": "défis pour élèves performants",
+  "DiffTous": "différenciation pour toute la classe"
+}
+
+Contexte de la leçon:
+- Matière: ${safeMatiere}
+- Classe: ${safeClasse}
+- Thème: ${safeLecon}
+- Travaux de classe: ${safeTravaux}
+- Support/Matériel: ${safeSupport}
+- Devoirs prévus: ${safeDevoirsPrevus}
+
+RÈGLES IMPORTANTES:
+1. Utilise uniquement des guillemets droits (") pour la structure JSON
+2. Pour le contenu texte, remplace tous les guillemets par des apostrophes (')
+3. Garde tout le texte sur une seule ligne (pas de sauts de ligne dans les chaînes)
+4. Toutes les clés doivent être exactement comme indiqué
+5. Renvoie UNIQUEMENT l'objet JSON, rien d'autre`;
         }
 
         // Appel API avec FALLBACK automatique sur les 4 clés Gemini
@@ -1608,72 +1852,110 @@ app.post('/api/generate-multiple-ai-lesson-plans', async (req, res) => {
           continue; // Passer au suivant
         }
         
-        // Parser JSON avec nettoyage robuste
+        // ========================================
+        // 🔥 PARSING JSON ULTRA-ROBUSTE
+        // ========================================
         let jsonData;
         try {
-          // Étape 1: Supprimer les marqueurs markdown et nettoyer
+          // Étape 1: Nettoyage initial agressif
           let cleanedJson = rawContent
-            .replace(/```json\n?|```\n?/g, '')
-            .replace(/[\u0000-\u001F\u007F-\u009F]/g, '') // Supprimer caractères de contrôle
+            .replace(/```json\n?|```\n?|```/g, '')  // Supprimer markdown
+            .replace(/^[^{]*/, '')  // Supprimer tout avant le premier {
+            .replace(/[^}]*$/, '')  // Supprimer tout après le dernier }
             .trim();
           
-          if (!cleanedJson) {
-            throw new Error('Contenu JSON vide après nettoyage');
+          if (!cleanedJson || cleanedJson.length < 10) {
+            throw new Error('Contenu JSON vide ou trop court après nettoyage');
           }
           
-          // Étape 2: Tenter le parsing direct
+          // Étape 2: Tentative parsing direct
           try {
             jsonData = JSON.parse(cleanedJson);
+            console.log(`✅ JSON parsé du premier coup`);
           } catch (firstParseError) {
-            console.warn(`⚠️ Parsing JSON échoué, tentative de réparation automatique...`);
+            console.warn(`⚠️ 1er parsing échoué: ${firstParseError.message}`);
             
-            // Étape 3: Méthode de réparation JSON robuste
-            // Stratégie: utiliser JSON5 (plus tolérant) ou réparer manuellement
-            
-            // a) Sauvegarder le JSON original pour debug
+            // Étape 3: Réparation AGRESSIVE avec regex
             const originalJson = cleanedJson;
             
-            // b) Réparer les problèmes courants:
-            cleanedJson = cleanedJson
-              // Échapper les sauts de ligne non échappés dans les strings
-              .replace(/:\s*"([^"]*?)\n([^"]*?)"/g, (match, before, after) => {
-                return `: "${before}\\n${after}"`;
-              })
-              // Échapper les guillemets non échappés (heuristique)
-              // Pattern: "texte"texte" → "texte\\"texte"
-              .replace(/"([^"\\]*)"([^":,\]\}\n])/g, '"$1\\"$2')
-              // Échapper les backslashes non échappés
-              .replace(/\\/g, '\\\\')
-              // Restaurer les échappements légitimes
-              .replace(/\\\\"/g, '\\"')
-              .replace(/\\\\n/g, '\\n')
-              .replace(/\\\\t/g, '\\t')
-              .replace(/\\\\r/g, '\\r');
+            // a) Remplacer TOUS les backslashes seuls par forward slash
+            cleanedJson = cleanedJson.replace(/\\(?!["'nrtbf\\])/g, '/');
             
-            // c) Deuxième tentative
-            try {
-              jsonData = JSON.parse(cleanedJson);
-              console.log(`✅ JSON réparé avec succès`);
-            } catch (secondParseError) {
-              // d) Dernière tentative: parser avec eval (dangereux mais contrôlé)
-              console.warn(`⚠️ Parsing JSON échoue toujours, log du contenu brut...`);
-              console.error(`  - JSON original (1000 premiers chars): ${originalJson.substring(0, 1000)}`);
+            // b) Échapper correctement les sauts de ligne littéraux dans les strings
+            // Pattern: "text<NEWLINE>text" → "text\ntext"
+            cleanedJson = cleanedJson.replace(/"([^"]*?)\n([^"]*?)"/g, (match, before, after) => {
+              return `"${before}\\n${after}"`;
+            });
+            
+            // c) Supprimer les caractères de contrôle invisibles
+            cleanedJson = cleanedJson.replace(/[\u0000-\u001F\u007F-\u009F]/g, '');
+            
+            // d) Normaliser les guillemets à l'intérieur des strings
+            // Stratégie: détecter les guillemets orphelins et les remplacer par ''
+            // Pattern complexe: chercher ":"..."..."..." et remplacer guillemets internes
+            let inString = false;
+            let fixed = '';
+            let lastWasEscape = false;
+            
+            for (let i = 0; i < cleanedJson.length; i++) {
+              const char = cleanedJson[i];
+              const nextChar = cleanedJson[i + 1];
               
-              // Lever l'erreur avec plus de contexte
-              const errorPos = parseInt(secondParseError.message.match(/position (\d+)/)?.[1] || '0');
-              if (errorPos > 0) {
-                const context = originalJson.substring(Math.max(0, errorPos - 100), Math.min(originalJson.length, errorPos + 100));
-                console.error(`  - Contexte de l'erreur (±100 chars): ...${context}...`);
-                console.error(`  - Caractère à la position ${errorPos}: "${originalJson[errorPos]}" (code: ${originalJson.charCodeAt(errorPos)})`);
+              if (char === '\\' && !lastWasEscape) {
+                lastWasEscape = true;
+                fixed += char;
+                continue;
               }
               
-              throw secondParseError;
+              if (char === '"' && !lastWasEscape) {
+                // Si on est dans une string et le prochain caractère n'est pas :,}]\n
+                // C'est probablement un guillemet interne → remplacer par ''
+                if (inString && nextChar && !/[:,\}\]\n\s]/.test(nextChar)) {
+                  fixed += "''";
+                  lastWasEscape = false;
+                  continue;
+                }
+                inString = !inString;
+              }
+              
+              fixed += char;
+              lastWasEscape = false;
+            }
+            
+            cleanedJson = fixed;
+            
+            // Étape 4: Deuxième tentative
+            try {
+              jsonData = JSON.parse(cleanedJson);
+              console.log(`✅ JSON réparé après corrections agressives`);
+            } catch (secondParseError) {
+              console.error(`❌ Parsing échoue même après réparation`);
+              console.error(`  - Erreur: ${secondParseError.message}`);
+              
+              // Extraire position et contexte de l'erreur
+              const errorPos = parseInt(secondParseError.message.match(/position (\d+)/)?.[1] || '0');
+              if (errorPos > 0 && errorPos < originalJson.length) {
+                const start = Math.max(0, errorPos - 150);
+                const end = Math.min(originalJson.length, errorPos + 150);
+                const context = originalJson.substring(start, end);
+                const pointer = ' '.repeat(Math.min(150, errorPos - start)) + '^';
+                console.error(`  - Contexte (±150 chars):\n${context}\n${pointer}`);
+              }
+              
+              // Log JSON complet pour debug (limité à 2000 chars)
+              console.error(`  - JSON original (premiers 2000 chars):\n${originalJson.substring(0, 2000)}`);
+              
+              throw new Error(`Parsing JSON impossible: ${secondParseError.message}`);
             }
           }
           
-          // Vérifier que les champs essentiels sont présents
+          // Vérifier structure minimale
+          if (!jsonData || typeof jsonData !== 'object') {
+            throw new Error('JSON parsé mais structure invalide (pas un objet)');
+          }
+          
           if (!jsonData.TitreUnite && !jsonData.Objectifs && !jsonData.etapes) {
-            throw new Error('Structure JSON invalide : champs essentiels manquants');
+            throw new Error('Structure JSON invalide: champs essentiels manquants (TitreUnite, Objectifs, etapes)');
           }
         } catch (parseError) {
           console.error(`❌ Erreur parsing JSON pour ${classe} ${matiere}:`);
