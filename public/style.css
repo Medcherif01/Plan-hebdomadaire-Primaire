@@ -778,18 +778,59 @@ td.editable.arabic-content {
     color: var(--primary-color); 
 }
 
-/* Bouton disquette VERT si plan de leçon déjà généré */
+/* 🤖 Robot BLEU - Plan de leçon pas encore généré */
+.ai-lesson-plan-button.lesson-plan-new {
+    color: #0066CC; /* Bleu vif */
+    animation: pulse-blue 2s ease-in-out infinite;
+}
+
+.ai-lesson-plan-button.lesson-plan-new:hover::before {
+    background: rgba(0, 102, 204, 0.25);
+}
+
+.ai-lesson-plan-button.lesson-plan-new:hover {
+    color: #004d99; /* Bleu plus foncé au survol */
+    transform: scale(1.4) rotate(-15deg);
+    filter: drop-shadow(0 4px 12px rgba(0, 102, 204, 0.6));
+}
+
+/* 🤖 Robot VERT - Plan de leçon déjà généré */
 .ai-lesson-plan-button.lesson-plan-exists {
-    color: var(--success-color);
+    color: #10B981; /* Vert succès */
+    animation: pulse-green 2s ease-in-out infinite;
 }
 
 .ai-lesson-plan-button.lesson-plan-exists:hover::before {
-    background: rgba(16, 185, 129, 0.2);
+    background: rgba(16, 185, 129, 0.25);
 }
 
 .ai-lesson-plan-button.lesson-plan-exists:hover {
-    color: var(--success-hover);
-    filter: drop-shadow(0 4px 8px rgba(16, 185, 129, 0.5));
+    color: #059669; /* Vert plus foncé au survol */
+    transform: scale(1.4) rotate(-15deg);
+    filter: drop-shadow(0 4px 12px rgba(16, 185, 129, 0.6));
+}
+
+/* Animations de pulsation pour attirer l'attention */
+@keyframes pulse-blue {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.1);
+        opacity: 0.8;
+    }
+}
+
+@keyframes pulse-green {
+    0%, 100% {
+        transform: scale(1);
+        filter: brightness(1);
+    }
+    50% {
+        transform: scale(1.05);
+        filter: brightness(1.2);
+    }
 }
 
 .save-indicator {

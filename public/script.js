@@ -289,27 +289,27 @@
                 indicatorSpan.style.display = rowObj && updK && rowObj[updK] ? 'inline-block' : 'none';
                 actTd.appendChild(indicatorSpan);
                 
-                // Bouton disquette pour générer le plan de leçon IA pour cette ligne
-                // Les enseignants peuvent générer leurs propres plans, l'admin peut tout générer
+                // 🤖 Bouton ROBOT pour générer le plan de leçon IA
+                // BLEU = pas encore généré, VERT = déjà généré
                 const teacherKey = findHKey('Enseignant');
                 const rowTeacher = teacherKey ? rowObj[teacherKey] : null;
                 const canGenerate = (loggedInUser === 'Mohamed' || loggedInUser === rowTeacher);
                 
                 if (canGenerate) {
                     const aiGenBtn = document.createElement('button');
-                    aiGenBtn.innerHTML = '<i class="fas fa-save"></i>';
-                    aiGenBtn.title = 'Générer Plan de Leçon de cette séance';
+                    aiGenBtn.innerHTML = '<i class="fas fa-robot"></i>';
                     aiGenBtn.classList.add('ai-lesson-plan-button');
                     aiGenBtn.style.marginLeft = '5px';
-                    console.log('🔵 Bouton disquette créé:', aiGenBtn);
                     
-                    // Changer la couleur si un plan de leçon existe déjà (vert au lieu de bleu)
+                    // Changer la couleur : VERT si déjà généré, BLEU sinon
                     if (rowObj && rowObj.lessonPlanId) {
-                        console.log(`🟢 Bouton VERT pour lessonPlanId: ${rowObj.lessonPlanId}`);
-                        aiGenBtn.classList.add('lesson-plan-exists');
-                        aiGenBtn.title = 'Plan de Leçon déjà généré - Régénérer';
+                        console.log(`🟢 Robot VERT pour lessonPlanId: ${rowObj.lessonPlanId}`);
+                        aiGenBtn.classList.add('lesson-plan-exists'); // Style vert
+                        aiGenBtn.title = '✅ Plan de Leçon déjà généré - Cliquer pour régénérer';
                     } else {
-                        console.log(`🔵 Bouton BLEU (pas de lessonPlanId)`);
+                        console.log(`🔵 Robot BLEU (pas de lessonPlanId)`);
+                        aiGenBtn.classList.add('lesson-plan-new'); // Style bleu
+                        aiGenBtn.title = '🤖 Générer Plan de Leçon IA pour cette séance';
                     }
                     
                     aiGenBtn.onclick = () => generateAILessonPlan(rowObj, tr);
@@ -317,21 +317,14 @@
                 }
                 
                 // Bouton pour télécharger le plan de leçon (si disponible)
-                // Les enseignants peuvent télécharger leurs propres plans
-                if (rowObj && rowObj.lessonPlanId) {
-                    const teacherKey = findHKey('Enseignant');
-                    const rowTeacher = teacherKey ? rowObj[teacherKey] : null;
-                    const canDownload = (loggedInUser === 'Mohamed' || loggedInUser === rowTeacher);
-                    
-                    if (canDownload) {
-                        const lessonBtn = document.createElement('button');
-                        lessonBtn.innerHTML = '<i class="fas fa-file-download"></i>';
-                        lessonBtn.title = 'Télécharger Plan de Leçon';
-                        lessonBtn.classList.add('lesson-plan-button');
-                        lessonBtn.style.marginLeft = '5px';
-                        lessonBtn.onclick = () => downloadLessonPlan(rowObj);
-                        actTd.appendChild(lessonBtn);
-                    }
+                if (rowObj && rowObj.lessonPlanId && canGenerate) {
+                    const lessonBtn = document.createElement('button');
+                    lessonBtn.innerHTML = '<i class="fas fa-file-download"></i>';
+                    lessonBtn.title = '📥 Télécharger Plan de Leçon existant';
+                    lessonBtn.classList.add('lesson-plan-button');
+                    lessonBtn.style.marginLeft = '5px';
+                    lessonBtn.onclick = () => downloadLessonPlan(rowObj);
+                    actTd.appendChild(lessonBtn);
                 }
                 tr.appendChild(actTd);
                 if (updK && tHead && tHead.querySelector('.updated-at-column')) {
