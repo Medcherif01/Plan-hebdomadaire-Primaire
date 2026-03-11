@@ -291,33 +291,28 @@
                 
                 // 🤖 Bouton ROBOT pour générer le plan de leçon IA
                 // BLEU = pas encore généré, VERT = déjà généré
-                const teacherKey = findHKey('Enseignant');
-                const rowTeacher = teacherKey ? rowObj[teacherKey] : null;
-                const canGenerate = (loggedInUser === 'Mohamed' || loggedInUser === rowTeacher);
+                // ✅ AFFICHER POUR TOUS LES UTILISATEURS (pas de restriction canGenerate)
+                const aiGenBtn = document.createElement('button');
+                aiGenBtn.innerHTML = '<i class="fas fa-robot"></i>';
+                aiGenBtn.classList.add('ai-lesson-plan-button');
+                aiGenBtn.style.marginLeft = '5px';
                 
-                if (canGenerate) {
-                    const aiGenBtn = document.createElement('button');
-                    aiGenBtn.innerHTML = '<i class="fas fa-robot"></i>';
-                    aiGenBtn.classList.add('ai-lesson-plan-button');
-                    aiGenBtn.style.marginLeft = '5px';
-                    
-                    // Changer la couleur : VERT si déjà généré, BLEU sinon
-                    if (rowObj && rowObj.lessonPlanId) {
-                        console.log(`🟢 Robot VERT pour lessonPlanId: ${rowObj.lessonPlanId}`);
-                        aiGenBtn.classList.add('lesson-plan-exists'); // Style vert
-                        aiGenBtn.title = '✅ Plan de Leçon déjà généré - Cliquer pour régénérer';
-                    } else {
-                        console.log(`🔵 Robot BLEU (pas de lessonPlanId)`);
-                        aiGenBtn.classList.add('lesson-plan-new'); // Style bleu
-                        aiGenBtn.title = '🤖 Générer Plan de Leçon IA pour cette séance';
-                    }
-                    
-                    aiGenBtn.onclick = () => generateAILessonPlan(rowObj, tr);
-                    actTd.appendChild(aiGenBtn);
+                // Changer la couleur : VERT si déjà généré, BLEU sinon
+                if (rowObj && rowObj.lessonPlanId) {
+                    console.log(`🟢 Robot VERT pour lessonPlanId: ${rowObj.lessonPlanId}`);
+                    aiGenBtn.classList.add('lesson-plan-exists'); // Style vert
+                    aiGenBtn.title = '✅ Plan de Leçon déjà généré - Cliquer pour régénérer';
+                } else {
+                    console.log(`🔵 Robot BLEU (pas de lessonPlanId)`);
+                    aiGenBtn.classList.add('lesson-plan-new'); // Style bleu
+                    aiGenBtn.title = '🤖 Générer Plan de Leçon IA pour cette séance';
                 }
                 
+                aiGenBtn.onclick = () => generateAILessonPlan(rowObj, tr);
+                actTd.appendChild(aiGenBtn);
+                
                 // Bouton pour télécharger le plan de leçon (si disponible)
-                if (rowObj && rowObj.lessonPlanId && canGenerate) {
+                if (rowObj && rowObj.lessonPlanId) {
                     const lessonBtn = document.createElement('button');
                     lessonBtn.innerHTML = '<i class="fas fa-file-download"></i>';
                     lessonBtn.title = '📥 Télécharger Plan de Leçon existant';

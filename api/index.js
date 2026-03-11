@@ -1187,6 +1187,23 @@ app.post('/api/generate-ai-lesson-plan', async (req, res) => {
     const devoirsPrevus = rowData[findKey(rowData, 'Devoirs')] || 'Non spécifié';
     
     console.log(`📚 [AI Lesson Plan] Données: ${enseignant} | ${classe} | ${matiere} | ${lecon}`);
+    
+    // ⚡ VALIDATION: Vérifier qu'au moins UN des 4 champs pédagogiques est rempli (≥3 caractères)
+    const leconTrimmed = lecon.trim();
+    const travauxTrimmed = travaux !== 'Non spécifié' ? travaux.trim() : '';
+    const supportTrimmed = support !== 'Non spécifié' ? support.trim() : '';
+    const devoirsTrimmed = devoirsPrevus !== 'Non spécifié' ? devoirsPrevus.trim() : '';
+    
+    const hasContent = (leconTrimmed.length >= 3) || (travauxTrimmed.length >= 3) || (supportTrimmed.length >= 3) || (devoirsTrimmed.length >= 3);
+    
+    if (!hasContent) {
+      console.log(`⏭️  [Single Plan] IGNORÉ (aucun contenu): ${enseignant} | ${classe} | ${matiere}`);
+      return res.status(400).json({ 
+        message: "Aucun contenu pédagogique trouvé. Au moins l'un des champs (Leçon, Travaux de classe, Support, Devoirs) doit être rempli (≥3 caractères)."
+      });
+    }
+    
+    console.log(`✓ [Single Plan] VALIDE (contenu détecté): ${enseignant} | ${classe} | ${matiere}`);
 
     // Date formatée
     let formattedDate = "";
