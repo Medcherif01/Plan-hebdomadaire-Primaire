@@ -1581,21 +1581,30 @@ app.post('/api/generate-multiple-ai-lesson-plans', async (req, res) => {
 
     console.log(`✅ [Multiple AI Lesson Plans] Génération de ${rowsData.length} plans pour semaine ${week}`);
 
-    // ⚡ FILTRER LES LIGNES AVEC LEÇONS VIDES AVANT DE COMMENCER
+    // ⚡ FILTRER LES LIGNES OÙ AUCUN CHAMP REQUIS N'EST REMPLI
+    // Critère: Au moins UN des 4 champs (Leçon, Travaux de classe, Support, Devoirs) doit être rempli
     const validRows = [];
     const skippedRows = [];
     
     for (let i = 0; i < rowsData.length; i++) {
       const rowData = rowsData[i];
-      const lecon = rowData[findKey(rowData, 'Leçon')] || '';
+      const lecon = (rowData[findKey(rowData, 'Leçon')] || '').trim();
+      const travaux = (rowData[findKey(rowData, 'Travaux de classe')] || '').trim();
+      const support = (rowData[findKey(rowData, 'Support')] || '').trim();
+      const devoirs = (rowData[findKey(rowData, 'Devoirs')] || '').trim();
+      
       const enseignant = rowData[findKey(rowData, 'Enseignant')] || '';
       const classe = rowData[findKey(rowData, 'Classe')] || '';
       const matiere = rowData[findKey(rowData, 'Matière')] || '';
       
-      if (!lecon || lecon.trim() === '' || lecon.trim().length < 3) {
-        console.log(`⏭️  [${i+1}/${rowsData.length}] IGNORÉ (leçon vide): ${enseignant} | ${classe} | ${matiere}`);
-        skippedRows.push({ index: i+1, enseignant, classe, matiere, reason: 'Leçon vide' });
+      // Vérifier si AU MOINS UN des 4 champs contient du texte (>2 caractères)
+      const hasContent = (lecon.length >= 3) || (travaux.length >= 3) || (support.length >= 3) || (devoirs.length >= 3);
+      
+      if (!hasContent) {
+        console.log(`⏭️  [${i+1}/${rowsData.length}] IGNORÉ (aucun contenu): ${enseignant} | ${classe} | ${matiere}`);
+        skippedRows.push({ index: i+1, enseignant, classe, matiere, reason: 'Aucun des champs requis (Leçon, Travaux, Support, Devoirs) n\'est rempli' });
       } else {
+        console.log(`✓ [${i+1}/${rowsData.length}] VALIDE (contenu détecté): ${enseignant} | ${classe} | ${matiere}`);
         validRows.push({ index: i, rowData });
       }
     }
@@ -1639,7 +1648,7 @@ app.post('/api/generate-multiple-ai-lesson-plans', async (req, res) => {
     
     // Si des lignes ont été ignorées, ajouter un fichier récapitulatif
     if (skippedRows.length > 0) {
-      const skipContent = `⏭️  LIGNES IGNORÉES (LEÇONS VIDES)\n\nTotal: ${skippedRows.length} ligne(s)\n\n` +
+      const skipContent = `⏭️  LIGNES IGNORÉES (AUCUN CONTENU PÉDAGOGIQUE)\n\nTotal: ${skippedRows.length} ligne(s)\n\nCritère d'exclusion: Aucun des 4 champs requis (Leçon, Travaux de classe, Support, Devoirs) n'est rempli.\n\n` +
         skippedRows.map(r => `${r.index}. ${r.enseignant} | ${r.classe} | ${r.matiere}\n   Raison: ${r.reason}`).join('\n\n');
       archive.append(Buffer.from(skipContent, 'utf-8'), { name: '00_LIGNES_IGNOREES.txt' });
     }
@@ -1663,13 +1672,11 @@ app.post('/api/generate-multiple-ai-lesson-plans', async (req, res) => {
         console.log(`📝 [${i+1}/${validRows.length}] (Ligne originale #${originalIndex+1}) ${enseignant} | ${classe} | ${matiere}`);
         console.log(`  ├─ Leçon: "${lecon.substring(0, 50)}${lecon.length > 50 ? '...' : ''}"`);
         console.log(`  ├─ Travaux: "${travaux.substring(0, 30)}${travaux.length > 30 ? '...' : ''}"`);
-        console.log(`  └─ Support: "${support.substring(0, 30)}${support.length > 30 ? '...' : ''}"`);
+        console.log(`  ├─ Support: "${support.substring(0, 30)}${support.length > 30 ? '...' : ''}"`);
+        console.log(`  └─ Devoirs: "${devoirsPrevus.substring(0, 30)}${devoirsPrevus.length > 30 ? '...' : ''}"`);
         
-        // Note: Cette vérification n'est plus nécessaire car déjà filtrée au début
-        // Mais on la garde par sécurité
-        if (!lecon || lecon.trim() === '') {
-          throw new Error('⚠️ Leçon vide - impossible de générer un plan de leçon sans contenu de leçon');
-        }
+        // Note: Vérification déjà faite en amont (au moins 1 des 4 champs rempli)
+        // Aucune vérification supplémentaire nécessaire ici
 
         // Date formatée
         let formattedDate = "";
