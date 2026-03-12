@@ -423,120 +423,63 @@
         
 
 
-        // 🆕 GÉNÉRATION SÉQUENTIELLE SIMPLIFIÉE (un par un, avec auto-refresh)
+        // 🤖 CLIQUE AUTOMATIQUE SUR TOUS LES ROBOTS (comme si vous cliquiez manuellement)
         async function generateAllDisplayedLessonPlans() {
             if (!currentWeek) {
                 displayAlert("Veuillez d'abord sélectionner une semaine.", true);
                 return;
             }
-            if (!filteredAndSortedData || filteredAndSortedData.length === 0) {
-                displayAlert("Aucune donnée à afficher. Utilisez les filtres pour afficher des données.", true);
+            
+            // Trouver tous les boutons robots visibles dans le tableau
+            const robotButtons = document.querySelectorAll('#planTable tbody .ai-lesson-plan-button');
+            
+            if (robotButtons.length === 0) {
+                displayAlert("Aucun robot trouvé. Assurez-vous que des données sont affichées.", true);
                 return;
             }
             
-            const confirmation = confirm(`Générer ${filteredAndSortedData.length} plan(s) de leçon IA ?\n\nSemaine: ${currentWeek}\nTemps estimé: ~${filteredAndSortedData.length * 20} secondes\n\n⚠️ Les plans se téléchargeront UN PAR UN automatiquement.\nLes robots changeront de BLEU à VERT après chaque génération.`);
+            const confirmation = confirm(`Cliquer automatiquement sur ${robotButtons.length} robot(s) ?\n\nSemaine: ${currentWeek}\nTemps estimé: ~${robotButtons.length * 20} secondes\n\n⚠️ Chaque plan se téléchargera automatiquement.\nLes robots changeront de BLEU à VERT.`);
             if (!confirmation) {
                 return;
             }
             
-            console.log(`🚀 Génération séquentielle de ${filteredAndSortedData.length} plans de leçon IA`);
+            console.log(`🤖 Clic automatique sur ${robotButtons.length} robots...`);
             
             const btn = document.getElementById('generateAllDisplayedPlansBtn');
             const originalHTML = btn ? btn.innerHTML : '';
             if (btn) {
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span class="btn-text">Génération...</span>';
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span class="btn-text">Clics en cours...</span>';
                 btn.disabled = true;
             }
             
             showProgressBar();
             
-            let successCount = 0;
-            let errorCount = 0;
-            
-            for (let i = 0; i < filteredAndSortedData.length; i++) {
-                const rowData = filteredAndSortedData[i];
+            // Cliquer sur chaque robot, un par un
+            for (let i = 0; i < robotButtons.length; i++) {
+                const robot = robotButtons[i];
                 
-                const enseignantKey = findHKey('Enseignant');
-                const classeKey = findHKey('Classe');
-                const matiereKey = findHKey('Matière');
+                displayAlert(`🤖 [${i+1}/${robotButtons.length}] Clic sur le robot...`, false);
+                updateProgressBar(10 + (i * 85 / robotButtons.length));
                 
-                const enseignant = rowData[enseignantKey] || 'Inconnu';
-                const classe = rowData[classeKey] || 'Inconnu';
-                const matiere = rowData[matiereKey] || 'Inconnu';
+                console.log(`🖱️ Clic sur robot ${i+1}/${robotButtons.length}`);
                 
-                displayAlert(`🤖 [${i+1}/${filteredAndSortedData.length}] Génération: ${enseignant} | ${classe} | ${matiere}`, false);
-                updateProgressBar(10 + (i * 80 / filteredAndSortedData.length));
+                // Simuler un clic sur le robot (déclenche generateAILessonPlan)
+                robot.click();
                 
-                try {
-                    // Appel API direct pour générer le plan
-                    const response = await fetch('/api/generate-ai-lesson-plan', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ week: currentWeek, rowData: rowData })
-                    });
-                    
-                    if (response.ok) {
-                        const blob = await response.blob();
-                        const contentDisposition = response.headers.get('content-disposition');
-                        let filename = `plan_lecon_S${currentWeek}_${i+1}.docx`;
-                        
-                        if (contentDisposition) {
-                            const filenameMatch = contentDisposition.match(/filename="?(.+?)"?(;|$)/i);
-                            if (filenameMatch && filenameMatch[1]) {
-                                filename = filenameMatch[1];
-                            }
-                        }
-                        
-                        // Télécharger le fichier
-                        if (typeof saveAs === 'function') {
-                            saveAs(blob, filename);
-                        } else {
-                            const link = document.createElement('a');
-                            link.href = window.URL.createObjectURL(blob);
-                            link.download = filename;
-                            document.body.appendChild(link);
-                            link.click();
-                            document.body.removeChild(link);
-                            window.URL.revokeObjectURL(link.href);
-                        }
-                        
-                        successCount++;
-                        console.log(`✅ [${i+1}/${filteredAndSortedData.length}] Plan généré: ${filename}`);
-                        
-                    } else {
-                        const errorResult = await response.json().catch(() => ({ message: "Erreur inconnue" }));
-                        throw new Error(errorResult.message || `Erreur ${response.status}`);
-                    }
-                    
-                } catch (error) {
-                    console.error(`❌ [${i+1}/${filteredAndSortedData.length}] Erreur:`, error);
-                    errorCount++;
-                }
-                
-                // Attendre 3 secondes entre chaque génération
-                if (i < filteredAndSortedData.length - 1) {
-                    await new Promise(resolve => setTimeout(resolve, 3000));
+                // Attendre 5 secondes avant de cliquer sur le prochain
+                // (le temps que le plan se génère et se télécharge)
+                if (i < robotButtons.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 5000));
                 }
             }
             
             updateProgressBar(100);
-            
-            // Recharger les données pour voir les robots verts
-            console.log('🔄 Rechargement des données pour mettre à jour les robots...');
-            await fetchPlanData(currentWeek);
-            
-            // Message final
-            const successMsg = `✅ ${successCount} plan(s) généré(s) avec succès`;
-            const errorMsg = errorCount > 0 ? `\n❌ ${errorCount} erreur(s)` : '';
-            const finalMsg = `${successMsg}${errorMsg}\n\n📥 Les fichiers ont été téléchargés automatiquement.`;
-            
-            displayAlert(finalMsg, errorCount > 0);
+            displayAlert(`✅ ${robotButtons.length} robot(s) cliqué(s) !\n\n📥 Les fichiers ont été téléchargés automatiquement.`, false);
             
             hideProgressBar();
             if (btn) {
                 btn.innerHTML = originalHTML;
                 btn.disabled = false;
-                updateActionButtonsState(filteredAndSortedData.length > 0);
             }
         }
         
