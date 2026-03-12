@@ -770,8 +770,32 @@ td.editable.arabic-content {
     filter: drop-shadow(0 4px 8px rgba(0, 102, 204, 0.5));
 }
 
+/* 💾 Bouton de sauvegarde - BLEU par défaut (non enregistré) */
 .save-row-button { 
-    color: var(--success-color); 
+    color: var(--primary-color); 
+    font-size: 1.3rem;
+}
+
+/* 💾 Bouton de sauvegarde - BLEU (non enregistré) */
+.save-row-button.unsaved {
+    color: #0066CC; /* Bleu */
+}
+
+.save-row-button.unsaved:hover {
+    color: #004d99;
+    transform: scale(1.3) rotate(10deg);
+    filter: drop-shadow(0 4px 8px rgba(0, 102, 204, 0.5));
+}
+
+/* ✅ Bouton de sauvegarde - VERT (déjà enregistré) */
+.save-row-button.saved {
+    color: #10B981; /* Vert */
+}
+
+.save-row-button.saved:hover {
+    color: #059669;
+    transform: scale(1.3) rotate(10deg);
+    filter: drop-shadow(0 4px 8px rgba(16, 185, 129, 0.5));
 }
 
 .ai-lesson-plan-button { 
