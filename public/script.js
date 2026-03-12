@@ -454,7 +454,7 @@
             let errorCount = 0;
             
             // Récupérer toutes les lignes du tableau visible
-            const tableRows = document.querySelectorAll('#planTableBody tr');
+            const tableRows = document.querySelectorAll('#planTable tbody tr');
             
             for (let i = 0; i < filteredAndSortedData.length; i++) {
                 const rowData = filteredAndSortedData[i];
