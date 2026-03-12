@@ -277,50 +277,52 @@
                 });
                 const actTd = document.createElement('td');
                 actTd.classList.add('actions-column');
-                const saveBtn = document.createElement('button');
-                saveBtn.innerHTML = '<i class="fas fa-check"></i>';
-                saveBtn.title = t('save_row_title');
-                saveBtn.classList.add('save-row-button');
-                saveBtn.onclick = () => saveRow(rowObj, tr);
-                actTd.appendChild(saveBtn);
+                
+                // ✅ INDICATEUR DE SAUVEGARDE (uniquement l'icône verte, pas de bouton)
                 const indicatorSpan = document.createElement('span');
                 indicatorSpan.className = 'save-indicator';
                 indicatorSpan.innerHTML = '<i class="fas fa-check-circle"></i>';
                 indicatorSpan.style.display = rowObj && updK && rowObj[updK] ? 'inline-block' : 'none';
+                indicatorSpan.title = 'Ligne enregistrée';
                 actTd.appendChild(indicatorSpan);
                 
-                // 🤖 Bouton ROBOT pour générer le plan de leçon IA
+                // Bouton de sauvegarde MASQUÉ (pour la fonction saveRow)
+                const hiddenSaveBtn = document.createElement('button');
+                hiddenSaveBtn.innerHTML = '<i class="fas fa-check"></i>';
+                hiddenSaveBtn.classList.add('save-row-button');
+                hiddenSaveBtn.style.display = 'none'; // MASQUÉ
+                hiddenSaveBtn.onclick = () => saveRow(rowObj, tr);
+                actTd.appendChild(hiddenSaveBtn);
+                
+                // Double-clic sur la ligne pour sauvegarder
+                tr.addEventListener('dblclick', (e) => {
+                    // Ne pas déclencher si on double-clique sur le robot
+                    if (!e.target.closest('.ai-lesson-plan-button')) {
+                        saveRow(rowObj, tr);
+                    }
+                });
+                
+                // 🤖 ROBOT BLEU/VERT pour générer le plan de leçon IA
                 // BLEU = pas encore généré, VERT = déjà généré
-                // ✅ AFFICHER POUR TOUS LES UTILISATEURS (pas de restriction canGenerate)
+                // ✅ VISIBLE POUR TOUS LES UTILISATEURS
                 const aiGenBtn = document.createElement('button');
                 aiGenBtn.innerHTML = '<i class="fas fa-robot"></i>';
                 aiGenBtn.classList.add('ai-lesson-plan-button');
-                aiGenBtn.style.marginLeft = '5px';
+                aiGenBtn.style.marginLeft = '8px';
                 
                 // Changer la couleur : VERT si déjà généré, BLEU sinon
                 if (rowObj && rowObj.lessonPlanId) {
                     console.log(`🟢 Robot VERT pour lessonPlanId: ${rowObj.lessonPlanId}`);
                     aiGenBtn.classList.add('lesson-plan-exists'); // Style vert
-                    aiGenBtn.title = '✅ Plan de Leçon déjà généré - Cliquer pour régénérer';
+                    aiGenBtn.title = '✅ Plan généré - Cliquer pour régénérer et télécharger';
                 } else {
                     console.log(`🔵 Robot BLEU (pas de lessonPlanId)`);
                     aiGenBtn.classList.add('lesson-plan-new'); // Style bleu
-                    aiGenBtn.title = '🤖 Générer Plan de Leçon IA pour cette séance';
+                    aiGenBtn.title = '🤖 Générer Plan de Leçon IA';
                 }
                 
                 aiGenBtn.onclick = () => generateAILessonPlan(rowObj, tr);
                 actTd.appendChild(aiGenBtn);
-                
-                // Bouton pour télécharger le plan de leçon (si disponible)
-                if (rowObj && rowObj.lessonPlanId) {
-                    const lessonBtn = document.createElement('button');
-                    lessonBtn.innerHTML = '<i class="fas fa-file-download"></i>';
-                    lessonBtn.title = '📥 Télécharger Plan de Leçon existant';
-                    lessonBtn.classList.add('lesson-plan-button');
-                    lessonBtn.style.marginLeft = '5px';
-                    lessonBtn.onclick = () => downloadLessonPlan(rowObj);
-                    actTd.appendChild(lessonBtn);
-                }
                 tr.appendChild(actTd);
                 if (updK && tHead && tHead.querySelector('.updated-at-column')) {
                     const updTd = document.createElement('td');

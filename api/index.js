@@ -312,19 +312,21 @@ async function callGeminiWithFallback(prompt) {
       const requestBody = {
         contents: [{ role: "user", parts: [{ text: prompt }] }],
         generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 2048,
-          topP: 0.95,
-          topK: 40
+          temperature: 0.5,  // Réduit de 0.7 à 0.5 pour plus de cohérence
+          maxOutputTokens: 4096,  // Augmenté de 2048 à 4096 pour réponses complètes
+          topP: 0.9,  // Réduit de 0.95 à 0.9 pour plus de déterminisme
+          topK: 40,
+          candidateCount: 1,  // Une seule réponse (évite confusion)
+          stopSequences: []  // Pas de stop précoce
         }
       };
       
-      console.log(`🔄 [Gemini] Appel API avec clé ${keyNumber}...`);
+      console.log(`🔄 [Gemini] Appel API avec clé ${keyNumber} (temp=0.5, tokens=4096)...`);
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody),
-        signal: AbortSignal.timeout(45000) // Timeout de 45 secondes
+        signal: AbortSignal.timeout(60000) // Timeout augmenté à 60 secondes
       });
       
       if (response.ok) {
@@ -2030,12 +2032,12 @@ RÈGLES IMPORTANTES:
         
         console.log(`✅ [${i+1}/${validRows.length}] Généré: ${docFilename}`);
 
-        // Délai adaptatif pour éviter rate limit
+        // Délai adaptatif AUGMENTÉ pour éviter rate limit et améliorer stabilité
         if (i < validRows.length - 1) {
-          // Délai progressif : 3s pour les premières, 5s après 10, 8s après 20
-          let delay = 3000; // 3 secondes par défaut
-          if (i >= 20) delay = 8000; // 8 secondes après 20 générations
-          else if (i >= 10) delay = 5000; // 5 secondes après 10 générations
+          // Délai progressif : 4s pour les premières, 6s après 8, 10s après 15
+          let delay = 4000; // 4 secondes par défaut (augmenté de 3s)
+          if (i >= 15) delay = 10000; // 10 secondes après 15 générations
+          else if (i >= 8) delay = 6000; // 6 secondes après 8 générations
           
           console.log(`⏳ Pause de ${delay/1000}s avant la prochaine génération...`);
           await new Promise(resolve => setTimeout(resolve, delay));
