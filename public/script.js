@@ -423,7 +423,7 @@
         
 
 
-        // 🆕 GÉNÉRATION SÉQUENTIELLE (pas de ZIP, un par un avec feedback visuel)
+        // 🆕 GÉNÉRATION SÉQUENTIELLE SIMPLIFIÉE (un par un, avec auto-refresh)
         async function generateAllDisplayedLessonPlans() {
             if (!currentWeek) {
                 displayAlert("Veuillez d'abord sélectionner une semaine.", true);
@@ -434,7 +434,7 @@
                 return;
             }
             
-            const confirmation = confirm(`Générer ${filteredAndSortedData.length} plan(s) de leçon IA ?\n\nSemaine: ${currentWeek}\nTemps estimé: ~${filteredAndSortedData.length * 20} secondes\n\n⚠️ NOUVEAU: Les plans se téléchargeront UN PAR UN automatiquement.\nVous verrez la progression en temps réel dans le tableau.`);
+            const confirmation = confirm(`Générer ${filteredAndSortedData.length} plan(s) de leçon IA ?\n\nSemaine: ${currentWeek}\nTemps estimé: ~${filteredAndSortedData.length * 20} secondes\n\n⚠️ Les plans se téléchargeront UN PAR UN automatiquement.\nLes robots changeront de BLEU à VERT après chaque génération.`);
             if (!confirmation) {
                 return;
             }
@@ -453,21 +453,8 @@
             let successCount = 0;
             let errorCount = 0;
             
-            // Récupérer toutes les lignes du tableau visible
-            const tableRows = document.querySelectorAll('#planTable tbody tr');
-            
             for (let i = 0; i < filteredAndSortedData.length; i++) {
                 const rowData = filteredAndSortedData[i];
-                const tableRow = tableRows[i];
-                
-                if (!tableRow) {
-                    console.warn(`⚠️ Ligne ${i+1} non trouvée dans le DOM`);
-                    continue;
-                }
-                
-                // Mettre en surbrillance la ligne en cours
-                tableRow.style.backgroundColor = '#fff3cd'; // Jaune clair
-                tableRow.style.border = '2px solid #ffc107';
                 
                 const enseignantKey = findHKey('Enseignant');
                 const classeKey = findHKey('Classe');
@@ -477,44 +464,66 @@
                 const classe = rowData[classeKey] || 'Inconnu';
                 const matiere = rowData[matiereKey] || 'Inconnu';
                 
-                displayAlert(`🤖 [${i+1}/${filteredAndSortedData.length}] Génération en cours: ${enseignant} | ${classe} | ${matiere}`, false);
+                displayAlert(`🤖 [${i+1}/${filteredAndSortedData.length}] Génération: ${enseignant} | ${classe} | ${matiere}`, false);
                 updateProgressBar(10 + (i * 80 / filteredAndSortedData.length));
                 
                 try {
-                    // Générer le plan via l'endpoint individuel
-                    await generateAILessonPlan(rowData, tableRow);
+                    // Appel API direct pour générer le plan
+                    const response = await fetch('/api/generate-ai-lesson-plan', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ week: currentWeek, rowData: rowData })
+                    });
                     
-                    // Marquer comme réussi (vert)
-                    tableRow.style.backgroundColor = '#d4edda'; // Vert clair
-                    tableRow.style.border = '2px solid #28a745';
-                    successCount++;
-                    
-                    console.log(`✅ [${i+1}/${filteredAndSortedData.length}] Plan généré: ${classe} ${matiere}`);
+                    if (response.ok) {
+                        const blob = await response.blob();
+                        const contentDisposition = response.headers.get('content-disposition');
+                        let filename = `plan_lecon_S${currentWeek}_${i+1}.docx`;
+                        
+                        if (contentDisposition) {
+                            const filenameMatch = contentDisposition.match(/filename="?(.+?)"?(;|$)/i);
+                            if (filenameMatch && filenameMatch[1]) {
+                                filename = filenameMatch[1];
+                            }
+                        }
+                        
+                        // Télécharger le fichier
+                        if (typeof saveAs === 'function') {
+                            saveAs(blob, filename);
+                        } else {
+                            const link = document.createElement('a');
+                            link.href = window.URL.createObjectURL(blob);
+                            link.download = filename;
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                            window.URL.revokeObjectURL(link.href);
+                        }
+                        
+                        successCount++;
+                        console.log(`✅ [${i+1}/${filteredAndSortedData.length}] Plan généré: ${filename}`);
+                        
+                    } else {
+                        const errorResult = await response.json().catch(() => ({ message: "Erreur inconnue" }));
+                        throw new Error(errorResult.message || `Erreur ${response.status}`);
+                    }
                     
                 } catch (error) {
                     console.error(`❌ [${i+1}/${filteredAndSortedData.length}] Erreur:`, error);
-                    
-                    // Marquer comme échoué (rouge)
-                    tableRow.style.backgroundColor = '#f8d7da'; // Rouge clair
-                    tableRow.style.border = '2px solid #dc3545';
                     errorCount++;
                 }
                 
-                // Attendre 2 secondes entre chaque génération (éviter rate limit)
+                // Attendre 3 secondes entre chaque génération
                 if (i < filteredAndSortedData.length - 1) {
-                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    await new Promise(resolve => setTimeout(resolve, 3000));
                 }
             }
             
             updateProgressBar(100);
             
-            // Réinitialiser les styles après 3 secondes
-            setTimeout(() => {
-                tableRows.forEach(row => {
-                    row.style.backgroundColor = '';
-                    row.style.border = '';
-                });
-            }, 3000);
+            // Recharger les données pour voir les robots verts
+            console.log('🔄 Rechargement des données pour mettre à jour les robots...');
+            await fetchPlanData(currentWeek);
             
             // Message final
             const successMsg = `✅ ${successCount} plan(s) généré(s) avec succès`;
