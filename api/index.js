@@ -99,7 +99,11 @@ const GEMINI_API_KEYS = [
   process.env.GEMINI_API_KEY_1,
   process.env.GEMINI_API_KEY_2,
   process.env.GEMINI_API_KEY_3,
-  process.env.GEMINI_API_KEY_4
+  process.env.GEMINI_API_KEY_4,
+  process.env.GEMINI_API_KEY_5,
+  process.env.GEMINI_API_KEY_6,
+  process.env.GEMINI_API_KEY_7,
+  process.env.GEMINI_API_KEY_8
 ].filter(key => key && key.length > 30); // Filtrer les clés vides ou invalides (clés Gemini = 39 chars)
 
 // Valider qu'au moins une clé est disponible
@@ -110,16 +114,20 @@ if (GEMINI_API_KEYS.length === 0) {
   console.error('');
   console.error('📋 ÉTAPES POUR RÉSOUDRE :');
   console.error('');
-  console.error('1️⃣  Créez 4 nouvelles clés API sur: https://aistudio.google.com/apikey');
-  console.error('    (Utilisez 4 projets Google Cloud différents pour plus de quota)');
+  console.error('1️⃣  Créez 8 nouvelles clés API sur: https://aistudio.google.com/apikey');
+  console.error('    (Utilisez 8 projets Google Cloud différents pour plus de quota)');
   console.error('');
   console.error('2️⃣  Sur Vercel, allez dans Settings → Environment Variables');
   console.error('');
-  console.error('3️⃣  Ajoutez ces 4 variables (avec VOS nouvelles clés) :');
+  console.error('3️⃣  Ajoutez ces 8 variables (avec VOS nouvelles clés) :');
   console.error('    • GEMINI_API_KEY_1 = votre_nouvelle_clé_1');
   console.error('    • GEMINI_API_KEY_2 = votre_nouvelle_clé_2');
   console.error('    • GEMINI_API_KEY_3 = votre_nouvelle_clé_3');
   console.error('    • GEMINI_API_KEY_4 = votre_nouvelle_clé_4');
+  console.error('    • GEMINI_API_KEY_5 = votre_nouvelle_clé_5');
+  console.error('    • GEMINI_API_KEY_6 = votre_nouvelle_clé_6');
+  console.error('    • GEMINI_API_KEY_7 = votre_nouvelle_clé_7');
+  console.error('    • GEMINI_API_KEY_8 = votre_nouvelle_clé_8');
   console.error('');
   console.error('4️⃣  Redéployez le projet (Deployments → Redeploy)');
   console.error('');
